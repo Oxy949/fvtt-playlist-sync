@@ -1,6 +1,6 @@
 const MODULE_ID = "fvtt-playlist-sync";
 
-const AUDIO_EXTENSIONS = ["mp3", "ogg", "wav", "flac", "m4a", "webm", "aac"];
+const AUDIO_EXTENSIONS = [".mp3", ".ogg", ".wav", ".flac", ".m4a", ".webm", ".aac"];
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "rootPath", {
@@ -70,6 +70,7 @@ class PlaylistSyncMenu extends FormApplication {
     let files;
     try {
       files = await collectAudioFilesRecursive("data", rootPath);
+      console.log(`${MODULE_ID} | found files:`, files.length, files.slice(0, 10));
     } catch (err) {
       console.error(`${MODULE_ID} | browse error`, err);
       ui.notifications.error("Playlist Sync: не удалось просканировать папку (см. консоль).");
@@ -98,6 +99,31 @@ function splitPath(p) {
   return normalizePath(p).split("/").filter(Boolean);
 }
 
+function safeDecode(str) {
+  const s = String(str ?? "");
+  try {
+    // Иногда встречается '+' вместо пробелов, на всякий
+    return decodeURIComponent(s.replace(/\+/g, "%20"));
+  } catch {
+    return s; // если строка невалидная, не падаем
+  }
+}
+
+function encodePathName(name) {
+  // Для поиска старых "закодированных" плейлистов вида %D0%...
+  return String(name ?? "")
+    .split("/")
+    .map(seg => encodeURIComponent(seg))
+    .join("/");
+}
+
+function decodedFileStem(path) {
+  const base = splitPath(path).pop() ?? "";
+  const decoded = safeDecode(base);
+  const lastDot = decoded.lastIndexOf(".");
+  return lastDot > 0 ? decoded.slice(0, lastDot) : decoded;
+}
+
 function fileBaseName(path) {
   const parts = splitPath(path);
   const file = parts[parts.length - 1] ?? "";
@@ -108,16 +134,15 @@ function fileBaseName(path) {
 function fileExt(path) {
   const base = splitPath(path).pop() ?? "";
   const idx = base.lastIndexOf(".");
-  return idx >= 0 ? base.slice(idx + 1).toLowerCase() : "";
+  return idx >= 0 ? base.slice(idx).toLowerCase() : "";
 }
 
 async function collectAudioFilesRecursive(source, dir) {
   const out = [];
 
   async function walk(currentDir) {
-    const res = await FilePicker.browse(source, currentDir, {
-      extensions: AUDIO_EXTENSIONS
-    });
+    // ВАЖНО: не используем options.extensions, потому что оно часто отсекает всё "в ноль"
+    const res = await FilePicker.browse(source, currentDir);
 
     // files
     for (const f of res.files ?? []) {
@@ -135,6 +160,7 @@ async function collectAudioFilesRecursive(source, dir) {
   await walk(normalizePath(dir));
   return out;
 }
+
 
 /**
  * Правило:
@@ -162,8 +188,8 @@ function buildSyncPlan(files, rootPath) {
     const rel = parts.slice(start); // <category>/<subdirs...>/<file>
     if (rel.length < 3) continue; // нужно минимум category/playlist/file
 
-    const category = rel[0];
-    const playlistPathParts = rel.slice(1, -1); // subdirs...
+    const category = safeDecode(rel[0]);
+    const playlistPathParts = rel.slice(1, -1).map(safeDecode);
     const playlistName = playlistPathParts.join("/");
 
     if (!playlistName) continue;
@@ -178,7 +204,7 @@ function buildSyncPlan(files, rootPath) {
   // сортируем файлы внутри каждой группы
   for (const [, catMap] of plan) {
     for (const [pl, arr] of catMap) {
-      arr.sort((a, b) => fileBaseName(a).localeCompare(fileBaseName(b), "ru"));
+      arr.sort((a, b) => decodedFileStem(a).localeCompare(decodedFileStem(b), "ru"));
       catMap.set(pl, arr);
     }
   }
@@ -221,7 +247,7 @@ async function replacePlaylistSounds(playlist, filePaths) {
   }
 
   const soundsData = filePaths.map((path, i) => ({
-    name: fileBaseName(path),
+    name: decodedFileStem(path),
     path,
     repeat: false,
     volume: 0.8,
