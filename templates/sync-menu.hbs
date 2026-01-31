@@ -1,33 +1,33 @@
 <div class="standard-form" autocomplete="off">
   <p>
-    {{localize 'PLAYLISTSYNC.MenuDescription'}}
+    {{menuDescription}}
   </p>
 
   <ul>
-    <li><code>{{localize 'PLAYLISTSYNC.MenuExample1'}}</code></li>
-    <li>{{{localize 'PLAYLISTSYNC.MenuExample2'}}}</li>
-    <li>{{{localize 'PLAYLISTSYNC.MenuExample3'}}}</li>
+    <li><code>{{menuExample1}}</code></li>
+    <li>{{{menuExample2}}}</li>
+    <li>{{{menuExample3}}}</li>
   </ul>
 
   <hr/>
 
   <div class="form-group">
-    <label>{{localize 'PLAYLISTSYNC.MenuLabel'}}</label>
+    <label>{{menuLabel}}</label>
     <div class="form-fields">
       <input type="text" name="rootPath" value="{{rootPath}}" />
     </div>
-    <p class="notes">{{localize 'PLAYLISTSYNC.MenuNote1'}}</p>
+    <p class="notes">{{{menuNote1}}}</p>
   </div>
 
   <hr/>
 
   <div class="form-group">
     <button type="button" data-action="sync">
-      <i class="fas fa-rotate"></i> {{localize 'PLAYLISTSYNC.MenuButton'}}
+      <i class="fas fa-rotate"></i> {{menuButton}}
     </button>
   </div>
 
   <p class="notes">
-    {{{localize 'PLAYLISTSYNC.MenuNote2'}}}
+    {{{menuNote2}}}
   </p>
 </div>

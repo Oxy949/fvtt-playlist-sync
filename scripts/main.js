@@ -25,7 +25,7 @@ class PlaylistSyncMenu extends FormApplication {
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
       id: "playlist-sync-menu",
-      title: () => game.i18n.localize("PLAYLISTSYNC.MenuTitle"),
+      title: "PLAYLISTSYNC.MenuTitle",
       template: `modules/${MODULE_ID}/templates/sync-menu.hbs`,
       width: 520,
       closeOnSubmit: false
@@ -34,7 +34,15 @@ class PlaylistSyncMenu extends FormApplication {
 
   getData() {
     return {
-      rootPath: game.settings.get(MODULE_ID, "rootPath")
+      rootPath: game.settings.get(MODULE_ID, "rootPath"),
+      menuDescription: game.i18n.localize("PLAYLISTSYNC.MenuDescription"),
+      menuExample1: game.i18n.format("PLAYLISTSYNC.MenuExample1", { rootPath: game.settings.get(MODULE_ID, "rootPath") }),
+      menuExample2: game.i18n.localize("PLAYLISTSYNC.MenuExample2"),
+      menuExample3: game.i18n.localize("PLAYLISTSYNC.MenuExample3"),
+      menuLabel: game.i18n.localize("PLAYLISTSYNC.MenuLabel"),
+      menuNote1: game.i18n.localize("PLAYLISTSYNC.MenuNote1"),
+      menuButton: game.i18n.localize("PLAYLISTSYNC.MenuButton"),
+      menuNote2: game.i18n.localize("PLAYLISTSYNC.MenuNote2")
     };
   }
 
