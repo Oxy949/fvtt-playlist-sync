@@ -487,6 +487,9 @@ async function applyPlaylistPreset(playlist, preset) {
   if (Object.hasOwn(data, "channel")) {
     update.channel = preset.channel;
   }
+  if (Object.hasOwn(data, "fade") && typeof preset?.fade === "number" && Number.isFinite(preset.fade)) {
+    update.fade = Math.max(0, Math.trunc(preset.fade));
+  }
 
   if (Object.keys(update).length) {
     await playlist.update(update, { render: false });
