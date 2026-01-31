@@ -4,8 +4,8 @@ const AUDIO_EXTENSIONS = [".mp3", ".ogg", ".wav", ".flac", ".m4a", ".webm", ".aa
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "rootPath", {
-    name: "Корневая папка аудио",
-    hint: "Папка внутри Data, которую нужно просканировать (по умолчанию assets/audio).",
+    name: () => game.i18n.localize("PLAYLISTSYNC.RootPath.name"),
+    hint: () => game.i18n.localize("PLAYLISTSYNC.RootPath.hint"),
     scope: "world",
     config: true,
     type: String,
@@ -13,9 +13,9 @@ Hooks.once("init", () => {
   });
 
   game.settings.registerMenu(MODULE_ID, "syncMenu", {
-    name: "Синхронизация плейлистов",
-    label: "Открыть",
-    hint: "Создать/обновить плейлисты по структуре папок в Data/assets/audio.",
+    name: () => game.i18n.localize("PLAYLISTSYNC.SyncMenu.name"),
+    label: () => game.i18n.localize("PLAYLISTSYNC.SyncMenu.label"),
+    hint: () => game.i18n.localize("PLAYLISTSYNC.SyncMenu.hint"),
     type: PlaylistSyncMenu,
     restricted: true
   });
@@ -25,7 +25,7 @@ class PlaylistSyncMenu extends FormApplication {
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
       id: "playlist-sync-menu",
-      title: "Синхронизация плейлистов",
+      title: game.i18n.localize("PLAYLISTSYNC.MenuTitle"),
       template: `modules/${MODULE_ID}/templates/sync-menu.hbs`,
       width: 520,
       closeOnSubmit: false
@@ -58,12 +58,14 @@ class PlaylistSyncMenu extends FormApplication {
 
   async _doSync() {
     if (!game.user.isGM) {
-      ui.notifications.warn("Синхронизация доступна только GM.");
+      ui.notifications.warn(game.i18n.localize("PLAYLISTSYNC.WarnGMOnly"));
       return;
     }
 
     const rootPath = normalizePath(game.settings.get(MODULE_ID, "rootPath") || "assets/audio");
-    ui.notifications.info(`Playlist Sync: сканирую Data/${rootPath} ...`);
+    ui.notifications.info(
+      game.i18n.format("PLAYLISTSYNC.InfoScanStart", { rootPath })
+    );
 
     const t0 = Date.now();
 
@@ -73,7 +75,7 @@ class PlaylistSyncMenu extends FormApplication {
       console.log(`${MODULE_ID} | found files:`, files.length, files.slice(0, 10));
     } catch (err) {
       console.error(`${MODULE_ID} | browse error`, err);
-      ui.notifications.error("Playlist Sync: не удалось просканировать папку (см. консоль).");
+      ui.notifications.error(game.i18n.localize("PLAYLISTSYNC.ErrorBrowseFailed"));
       return;
     }
 
@@ -83,7 +85,11 @@ class PlaylistSyncMenu extends FormApplication {
 
     const dt = ((Date.now() - t0) / 1000).toFixed(1);
     ui.notifications.info(
-      `Playlist Sync: готово за ${dt}s. Плейлистов: ${result.playlistsTouched}, звуков: ${result.soundsCreated}.`
+      game.i18n.format("PLAYLISTSYNC.InfoScanComplete", {
+        time: dt,
+        playlists: result.playlistsTouched,
+        sounds: result.soundsCreated
+      })
     );
   }
 }

@@ -1,35 +1,33 @@
-<form class="flexcol" autocomplete="off">
+<div class="standard-form" autocomplete="off">
   <p>
-    Синхронизация создаёт (или обновляет) плейлисты по структуре папок внутри
-    <code>Data/{{rootPath}}</code>.
-    Плейлисты группируются так:
+    {{localize 'PLAYLISTSYNC.MenuDescription'}}
   </p>
 
   <ul>
-    <li><code>{{rootPath}}/&lt;folder&gt;/&lt;subfolder...&gt;/file.ext</code></li>
-    <li><b>Folder (Playlist)</b> = <code>&lt;folder&gt;</code></li>
-    <li><b>Playlist</b> = путь <code>&lt;subfolder...&gt;</code> (например <code>battle</code> или <code>horror/crypt</code>)</li>
+    <li><code>{{localize 'PLAYLISTSYNC.MenuExample1'}}</code></li>
+    <li>{{{localize 'PLAYLISTSYNC.MenuExample2'}}}</li>
+    <li>{{{localize 'PLAYLISTSYNC.MenuExample3'}}}</li>
   </ul>
 
   <hr/>
 
   <div class="form-group">
-    <label>Корневая папка</label>
+    <label>{{localize 'PLAYLISTSYNC.MenuLabel'}}</label>
     <div class="form-fields">
       <input type="text" name="rootPath" value="{{rootPath}}" />
     </div>
-    <p class="notes">По умолчанию: <code>assets/audio</code>. Используй слэши <code>/</code>, не <code>\</code>.</p>
+    <p class="notes">{{localize 'PLAYLISTSYNC.MenuNote1'}}</p>
   </div>
 
   <hr/>
 
   <div class="form-group">
     <button type="button" data-action="sync">
-      <i class="fas fa-rotate"></i> Синхронизировать
+      <i class="fas fa-rotate"></i> {{localize 'PLAYLISTSYNC.MenuButton'}}
     </button>
   </div>
 
   <p class="notes">
-    Важно: требуется доступ GM. Звуки внутри найденных плейлистов будут пересозданы.
+    {{{localize 'PLAYLISTSYNC.MenuNote2'}}}
   </p>
-</form>
+</div>

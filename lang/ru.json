@@ -3,42 +3,27 @@
   "I18N.MAINTAINERS": "@Oxy949",
 
   "PLAYLISTSYNC": {
-    "ToggleToolbar": "Переключить аудио-отправитель",
-    "Settings": {
-      "streams": {
-        "name": "VDO.Ninja потоки (на пользователя)",
-        "menuName": "URL-ы VDO.Ninja",
-        "menuLabel": "Настроить VDO.Ninja URL-ы",
-        "menuHint": "Вставьте ссылку просмотра VDO.Ninja (\"view\") для каждого пользователя Foundry. Камеры Foundry будут показывать эти потоки."
-      },
-      "gmForcePortraitHeight": {
-        "name": "Перезаписывать высоту портретов у игроков",
-        "hint": "Если включено, GM может установить конкретную высоту для портретов игроков."
-      }
-    }
-    ,"StreamsConfig": {
-      "user": "Пользователь",
-      "viewerUrl": "URL просмотра VDO.Ninja",
-      "save": "Сохранить",
-      "title": "Потоки VDO.Ninja",
-      "example": "https://vdo.ninja/?view=YOUR_VIEW_ID",
-      "saved": "URL-ы потоков VDO.Ninja сохранены."
-    }
-    ,"Conference": {
-      "title": "A/V: Режим конференции",
-      "errorNoAVModes": "Не нашёл AV_MODES (AVSettings). Версия Foundry может быть несовместима.",
-      "errorNoAVModesChange": "Не нашёл AV_MODES (AVSettings). Не могу изменить режим.",
-      "warnUpdateFailed": "Не смог обновить A/V режим: не нашёл подходящий core-setting или нет прав на world-setting.",
-      "updatedInfo": "A/V: режим конференции обновлён ({fullKey}: {old} → {new})",
-      "currentModeTitle": "Текущий режим:",
-      "coreSettingLabel": "Core-setting:",
-      "noSettingNote": "Core-setting с полем \"mode\" не найден. Кнопки могут не работать.",
-      "modes": {
-        "off": "Выключено",
-        "video": "Только видео",
-        "av": "Видео + аудио"
-      },
-      "notesParagraph": "Это меняет режим встроенной конференции Foundry (core RTC/AV настройки). Для VDO.Ninja iframe это важно в основном косвенно: влияет на то, как Foundry создаёт и показывает плитки камер."
-    }
+    "RootPath": {
+      "name": "Корневая папка аудио",
+      "hint": "Папка внутри Data, которую нужно просканировать (по умолчанию assets/audio)."
+    },
+    "SyncMenu": {
+      "name": "Синхронизация плейлистов",
+      "label": "Открыть",
+      "hint": "Создать/обновить плейлисты по структуре папок в Data/assets/audio."
+    },
+    "MenuTitle": "Синхронизация плейлистов",
+    "InfoScanStart": "Playlist Sync: сканирую Data/{rootPath} ...",
+    "ErrorBrowseFailed": "Playlist Sync: не удалось просканировать папку (см. консоль).",
+    "WarnGMOnly": "Синхронизация доступна только GM.",
+    "InfoScanComplete": "Playlist Sync: готово за {time}s. Плейлистов: {playlists}, звуков: {sounds}.",
+    "MenuDescription": "Синхронизация создаёт (или обновляет) плейлисты по структуре папок внутри <code>Data/{rootPath}</code>. Плейлисты группируются так:",
+    "MenuExample1": "{rootPath}/<folder>/<subfolder...>/file.ext",
+    "MenuExample2": "<b>Folder (Playlist)</b> = <code>&lt;folder&gt;</code>",
+    "MenuExample3": "<b>Playlist</b> = путь <code>&lt;subfolder...&gt;</code> (например <code>battle</code> или <code>horror/crypt</code>)",
+    "MenuLabel": "Корневая папка",
+    "MenuNote1": "По умолчанию: <code>assets/audio</code>. Используй слэши <code>/</code>, не <code>\\</code>.",
+    "MenuButton": "Синхронизировать",
+    "MenuNote2": "Важно: требуется доступ GM. Звуки внутри найденных плейлистов будут пересозданы."
   }
 }

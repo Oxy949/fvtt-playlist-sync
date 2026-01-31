@@ -3,42 +3,27 @@
   "I18N.MAINTAINERS": "@Oxy949",
 
   "PLAYLISTSYNC": {
-    "ToggleToolbar": "Toggle Audio Sender",
-    "Settings": {
-      "streams": {
-        "name": "VDO.Ninja streams (per user)",
-        "menuName": "VDO.Ninja stream URLs",
-        "menuLabel": "Configure VDO.Ninja URLs",
-        "menuHint": "Paste a VDO.Ninja viewer (\"view\") link for each Foundry user. Foundry camera tiles will show those streams."
-      },
-      "gmForcePortraitHeight": {
-        "name": "Override player portrait height",
-        "hint": "If enabled, the GM can set a specific height for player portraits."
-      }
-    }
-    ,"StreamsConfig": {
-      "user": "User",
-      "viewerUrl": "VDO.Ninja viewer URL",
-      "save": "Save",
-      "title": "VDO.Ninja streams",
-      "example": "https://vdo.ninja/?view=YOUR_VIEW_ID",
-      "saved": "VDO.Ninja stream URLs saved."
-    }
-    ,"Conference": {
-      "title": "A/V: Conference Mode",
-      "errorNoAVModes": "Could not find AV_MODES (AVSettings). Foundry may be incompatible.",
-      "errorNoAVModesChange": "Could not find AV_MODES (AVSettings). Cannot change mode.",
-      "warnUpdateFailed": "Could not update A/V mode: no suitable core-setting found or insufficient permissions.",
-      "updatedInfo": "A/V: conference mode updated ({fullKey}: {old} → {new})",
-      "currentModeTitle": "Current mode:",
-      "coreSettingLabel": "Core-setting:",
-      "noSettingNote": "No core setting with a `mode` field was found. Buttons may not work.",
-      "modes": {
-        "off": "Off",
-        "video": "Video only",
-        "av": "Video + audio"
-      },
-      "notesParagraph": "This changes Foundry's built-in conference mode (core RTC/AV settings). For the VDO.Ninja iframe this is indirectly important: it affects how Foundry creates and displays camera tiles."
-    }
+    "RootPath": {
+      "name": "Audio Root Folder",
+      "hint": "Folder inside Data to scan (default: assets/audio)."
+    },
+    "SyncMenu": {
+      "name": "Synchronize Playlists",
+      "label": "Open",
+      "hint": "Create/update playlists by folder structure in Data/assets/audio."
+    },
+    "MenuTitle": "Playlist Synchronization",
+    "InfoScanStart": "Playlist Sync: scanning Data/{rootPath} ...",
+    "ErrorBrowseFailed": "Playlist Sync: unable to scan folder (see console).",
+    "WarnGMOnly": "Synchronization is available only to GM.",
+    "InfoScanComplete": "Playlist Sync: completed in {time}s. Playlists: {playlists}, sounds: {sounds}.",
+    "MenuDescription": "Synchronization creates (or updates) playlists by folder structure inside <code>Data/{rootPath}</code>. Playlists are grouped as:",
+    "MenuExample1": "{rootPath}/<folder>/<subfolder...>/file.ext",
+    "MenuExample2": "<b>Folder (Playlist)</b> = <code>&lt;folder&gt;</code>",
+    "MenuExample3": "<b>Playlist</b> = path <code>&lt;subfolder...&gt;</code> (e.g. <code>battle</code> or <code>horror/crypt</code>)",
+    "MenuLabel": "Root Folder",
+    "MenuNote1": "Default: <code>assets/audio</code>. Use slashes <code>/</code>, not <code>\\</code>.",
+    "MenuButton": "Synchronize",
+    "MenuNote2": "Important: requires GM access. Sounds in found playlists will be recreated."
   }
 }
