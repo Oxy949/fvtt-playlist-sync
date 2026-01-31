@@ -18,6 +18,7 @@ Hooks.once("init", () => {
   //  - repeat: boolean
   //  - channel: "music" | "ambient" | "interface"
   //  - fade: number (ms) applied to playlist sounds
+  //  - mode: "keep" | "sequential" | "shuffle" | "simultaneous" | "manual"
   game.settings.register(MODULE_ID, "presets", {
     name: "PLAYLISTSYNC.Presets.name",
     hint: "PLAYLISTSYNC.Presets.hint",
@@ -70,7 +71,27 @@ class PlaylistSyncMenu extends FormApplication {
         music: game.i18n.localize("PLAYLISTSYNC.ChannelMusic"),
         environment: game.i18n.localize("PLAYLISTSYNC.ChannelEnvironment"),
         interface: game.i18n.localize("PLAYLISTSYNC.ChannelInterface")
-      }
+      },
+
+      modes: {
+        keep: localizeWithFallback("PLAYLISTSYNC.PresetModeKeep", "Don't change"),
+        sequential: localizeWithFallback("PLAYLISTSYNC.PresetModeSequential", "Sequential"),
+        shuffle: localizeWithFallback("PLAYLISTSYNC.PresetModeShuffle", "Shuffle"),
+        simultaneous: localizeWithFallback("PLAYLISTSYNC.PresetModeSimultaneous", "Simultaneous"),
+        manual: localizeWithFallback("PLAYLISTSYNC.PresetModeManual", "Manual")
+      },
+
+      presetLabelPattern: localizeWithFallback("PLAYLISTSYNC.PresetLabelPattern", "RegExp"),
+      presetLabelVolume: localizeWithFallback("PLAYLISTSYNC.PresetLabelVolume", "Volume"),
+      presetLabelRepeat: localizeWithFallback("PLAYLISTSYNC.PresetLabelRepeat", "Repeat"),
+      presetLabelChannel: localizeWithFallback("PLAYLISTSYNC.PresetLabelChannel", "Channel"),
+      presetLabelFade: localizeWithFallback("PLAYLISTSYNC.PresetLabelFade", "Fade, ms"),
+      presetLabelMode: localizeWithFallback("PLAYLISTSYNC.PresetLabelMode", "Playback mode"),
+
+      presetMoveUpTitle: localizeWithFallback("PLAYLISTSYNC.PresetMoveUpTitle", "Up"),
+      presetMoveDownTitle: localizeWithFallback("PLAYLISTSYNC.PresetMoveDownTitle", "Down"),
+      presetDeleteTitle: localizeWithFallback("PLAYLISTSYNC.PresetDeleteTitle", "Delete"),
+      presetInvalidRegexPrefix: localizeWithFallback("PLAYLISTSYNC.PresetInvalidRegexPrefix", "Invalid RegExp:")
 
     };
   }
@@ -152,6 +173,9 @@ class PlaylistSyncMenu extends FormApplication {
         case "fade":
           p.fade = Math.max(0, Math.trunc(Number(v) || 0));
           break;
+        case "mode":
+          p.mode = String(v);
+          break;
       }
 
       presets[idx] = sanitizePreset(p);
@@ -225,6 +249,50 @@ function clamp01(n) {
   return Math.min(1, Math.max(0, x));
 }
 
+function normalizePresetMode(mode) {
+  const raw = String(mode ?? "").trim().toLowerCase();
+  if (!raw) return "keep";
+  if (raw === "soundboard") return "manual";
+  const allowed = ["keep", "sequential", "shuffle", "simultaneous", "manual"];
+  return allowed.includes(raw) ? raw : "keep";
+}
+
+function resolvePlaylistModeValue(presetMode, existingMode) {
+  const key = normalizePresetMode(presetMode);
+  if (key === "keep") return null;
+
+  // Some FVTT versions store this as a string, others as a numeric enum.
+  if (typeof existingMode === "string") {
+    const map = {
+      sequential: "sequential",
+      shuffle: "shuffle",
+      simultaneous: "simultaneous",
+      manual: "soundboard"
+    };
+    return map[key] ?? null;
+  }
+
+  const modes =
+    globalThis?.CONST?.PLAYLIST_MODES ??
+    globalThis?.Playlist?.MODES ??
+    null;
+
+  const wanted = {
+    sequential: "SEQUENTIAL",
+    shuffle: "SHUFFLE",
+    simultaneous: "SIMULTANEOUS",
+    manual: "SOUNDBOARD"
+  }[key];
+
+  if (modes && wanted && modes[wanted] !== undefined) return modes[wanted];
+
+  // Fallback mapping (common across many FVTT versions). We only use it if existingMode looks numeric.
+  const fallback = { sequential: 1, shuffle: 2, simultaneous: 3, manual: 4 }[key];
+  if (typeof existingMode === "number" && Number.isFinite(existingMode)) return fallback ?? null;
+
+  return null;
+}
+
 function splitPath(p) {
   return normalizePath(p).split("/").filter(Boolean);
 }
@@ -256,7 +324,8 @@ function makeDefaultPreset() {
     volume: 0.8,
     repeat: false,
     channel: "environment",
-    fade: 1000
+    fade: 1000,
+    mode: "keep"
   };
 }
 
@@ -269,7 +338,8 @@ function sanitizePreset(p) {
     channel: ["music", "environment", "interface"].includes(String(p?.channel))
       ? String(p.channel)
       : "music",
-    fade: Math.max(0, Math.trunc(Number(p?.fade) || 0))
+    fade: Math.max(0, Math.trunc(Number(p?.fade) || 0)),
+    mode: normalizePresetMode(p?.mode)
   };
   return out;
 }
@@ -489,6 +559,11 @@ async function applyPlaylistPreset(playlist, preset) {
   }
   if (Object.hasOwn(data, "fade") && typeof preset?.fade === "number" && Number.isFinite(preset.fade)) {
     update.fade = Math.max(0, Math.trunc(preset.fade));
+  }
+
+  if (Object.hasOwn(data, "mode")) {
+    const modeValue = resolvePlaylistModeValue(preset?.mode, data.mode);
+    if (modeValue !== null) update.mode = modeValue;
   }
 
   if (Object.keys(update).length) {

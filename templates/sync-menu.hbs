@@ -35,52 +35,62 @@
       {{#each presets as |p idx|}}
         <li style="margin-bottom: .75rem;">
           <div class="form-group" style="align-items: center; gap: .5rem;">
-            <label style="flex: 0 0 110px;">RegExp</label>
+            <label style="flex: 0 0 110px;">{{../presetLabelPattern}}</label>
             <div class="form-fields" style="flex: 1 1 auto;">
               <input type="text" value="{{p.pattern}}" data-index="{{idx}}" data-field="pattern" placeholder="audio/ambient|audio/music" />
             </div>
-            <button type="button" data-action="move-preset" data-dir="up" data-index="{{idx}}" title="Вверх">
+            <button type="button" data-action="move-preset" data-dir="up" data-index="{{idx}}" title="{{../presetMoveUpTitle}}">
               <i class="fas fa-chevron-up"></i>
             </button>
-            <button type="button" data-action="move-preset" data-dir="down" data-index="{{idx}}" title="Вниз">
+            <button type="button" data-action="move-preset" data-dir="down" data-index="{{idx}}" title="{{../presetMoveDownTitle}}">
               <i class="fas fa-chevron-down"></i>
             </button>
-            <button type="button" data-action="delete-preset" data-index="{{idx}}" title="Удалить">
+            <button type="button" data-action="delete-preset" data-index="{{idx}}" title="{{../presetDeleteTitle}}">
               <i class="fas fa-trash"></i>
             </button>
           </div>
 
           {{#unless p._valid}}
             <p class="notes" style="color: var(--color-level-error); margin-top: -0.25rem;">
-              Невалидное RegExp: {{p._error}}
+              {{../presetInvalidRegexPrefix}} {{p._error}}
             </p>
           {{/unless}}
 
           <div class="form-group" style="gap: .5rem;">
-            <label style="flex: 0 0 110px;">Громкость</label>
+            <label style="flex: 0 0 110px;">{{../presetLabelVolume}}</label>
             <div class="form-fields" style="flex: 1 1 auto;">
               <input type="number" min="0" max="1" step="0.05" value="{{p.volume}}" data-index="{{idx}}" data-field="volume" />
             </div>
 
-            <label style="flex: 0 0 70px; text-align:right;">Повтор</label>
+            <label style="flex: 0 0 70px; text-align:right;">{{../presetLabelRepeat}}</label>
             <div class="form-fields" style="flex: 0 0 auto;">
               <input type="checkbox" {{#if p.repeat}}checked{{/if}} data-index="{{idx}}" data-field="repeat" />
             </div>
           </div>
 
           <div class="form-group" style="gap: .5rem;">
-            <label style="flex: 0 0 110px;">Канал</label>
+            <label style="flex: 0 0 110px;">{{../presetLabelChannel}}</label>
             <div class="form-fields" style="flex: 1 1 auto;">
               <select data-index="{{idx}}" data-field="channel">
                 {{selectOptions ../channels selected=p.channel}}
               </select>
             </div>
 
-            <label style="flex: 0 0 70px; text-align:right;">Fade, мс</label>
+            <label style="flex: 0 0 70px; text-align:right;">{{../presetLabelFade}}</label>
             <div class="form-fields" style="flex: 0 0 120px;">
               <input type="number" min="0" step="50" value="{{p.fade}}" data-index="{{idx}}" data-field="fade" />
             </div>
           </div>
+
+          <div class="form-group" style="gap: .5rem;">
+            <label style="flex: 0 0 110px;">{{../presetLabelMode}}</label>
+            <div class="form-fields" style="flex: 1 1 auto;">
+              <select data-index="{{idx}}" data-field="mode">
+                {{selectOptions ../modes selected=p.mode}}
+              </select>
+            </div>
+          </div>
+
         </li>
       {{/each}}
     </ol>

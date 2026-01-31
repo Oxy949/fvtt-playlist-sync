@@ -1,7 +1,6 @@
 {
   "I18N.LANGUAGE": "Русский",
   "I18N.MAINTAINERS": "@Oxy949",
-
   "PLAYLISTSYNC": {
     "RootPath": {
       "name": "Корневая папка аудио",
@@ -27,7 +26,7 @@
     "MenuNote2": "Важно: требуется доступ GM. Звуки внутри найденных плейлистов будут пересозданы.",
     "Presets": {
       "name": "Пресеты",
-      "hint": "Пресеты позволяют настраивать громкость, повтор, канал и затухание звука для плейлистов на основе их путей."
+      "hint": "Пресеты позволяют настраивать громкость, повтор, канал, затухание и режим воспроизведения для плейлистов на основе их путей."
     },
     "PresetsTitle": "Пресеты",
     "PresetsHint": "Пресеты применяются по первому совпадению регулярного выражения с путём плейлиста: <rootPath>/<category>/<subdirs>.",
@@ -35,6 +34,21 @@
     "PresetsEmpty": "Пока нет пресетов. Всё как всегда.",
     "ChannelMusic": "Музыка",
     "ChannelEnvironment": "Окружение",
-    "ChannelInterface": "Интерфейс/FX"
+    "ChannelInterface": "Интерфейс/FX",
+    "PresetLabelPattern": "RegExp",
+    "PresetLabelVolume": "Громкость",
+    "PresetLabelRepeat": "Повтор",
+    "PresetLabelChannel": "Канал",
+    "PresetLabelFade": "Fade, мс",
+    "PresetLabelMode": "Режим",
+    "PresetMoveUpTitle": "Вверх",
+    "PresetMoveDownTitle": "Вниз",
+    "PresetDeleteTitle": "Удалить",
+    "PresetInvalidRegexPrefix": "Невалидное RegExp:",
+    "PresetModeKeep": "Не менять",
+    "PresetModeSequential": "Последовательный",
+    "PresetModeShuffle": "Перемешивание",
+    "PresetModeSimultaneous": "Одновременный",
+    "PresetModeManual": "Вручную"
   }
 }

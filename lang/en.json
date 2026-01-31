@@ -1,7 +1,6 @@
 {
   "I18N.LANGUAGE": "English",
   "I18N.MAINTAINERS": "@Oxy949",
-
   "PLAYLISTSYNC": {
     "RootPath": {
       "name": "Audio Root Folder",
@@ -27,7 +26,7 @@
     "MenuNote2": "Important: requires GM access. Sounds in found playlists will be recreated.",
     "Presets": {
       "name": "Presets",
-      "hint": "Presets allow customizing volume, repeat, channel, and fade settings for playlists based on their path patterns."
+      "hint": "Presets allow customizing volume, repeat, channel, fade settings, and playback mode for playlists based on their path patterns."
     },
     "PresetsTitle": "Presets",
     "PresetsHint": "Presets are applied by first regex match against the playlist path: <rootPath>/<category>/<subdirs>.",
@@ -35,6 +34,21 @@
     "PresetsEmpty": "No presets yet. Everything as usual.",
     "ChannelMusic": "Music",
     "ChannelEnvironment": "Environment",
-    "ChannelInterface": "Interface/FX"
+    "ChannelInterface": "Interface/FX",
+    "PresetLabelPattern": "RegExp",
+    "PresetLabelVolume": "Volume",
+    "PresetLabelRepeat": "Repeat",
+    "PresetLabelChannel": "Channel",
+    "PresetLabelFade": "Fade, ms",
+    "PresetLabelMode": "Playback mode",
+    "PresetMoveUpTitle": "Up",
+    "PresetMoveDownTitle": "Down",
+    "PresetDeleteTitle": "Delete",
+    "PresetInvalidRegexPrefix": "Invalid RegExp:",
+    "PresetModeKeep": "Don't change",
+    "PresetModeSequential": "Sequential",
+    "PresetModeShuffle": "Shuffle",
+    "PresetModeSimultaneous": "Simultaneous",
+    "PresetModeManual": "Manual"
   }
 }
