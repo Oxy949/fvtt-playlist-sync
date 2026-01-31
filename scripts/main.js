@@ -12,6 +12,21 @@ Hooks.once("init", () => {
     default: "assets/audio"
   });
 
+  // Presets:
+  //  - pattern: JS RegExp (plain source like "audio/ambient" or literal like "/audio\\/ambient/i")
+  //  - volume: 0..1 (playlist volume)
+  //  - repeat: boolean
+  //  - channel: "music" | "ambient" | "interface"
+  //  - fade: number (ms) applied to playlist sounds
+  game.settings.register(MODULE_ID, "presets", {
+    name: "PLAYLISTSYNC.Presets.name",
+    hint: "PLAYLISTSYNC.Presets.hint",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: []
+  });
+
   game.settings.registerMenu(MODULE_ID, "syncMenu", {
     name: "PLAYLISTSYNC.SyncMenu.name",
     label: "PLAYLISTSYNC.SyncMenu.label",
@@ -33,6 +48,7 @@ class PlaylistSyncMenu extends FormApplication {
   }
 
   getData() {
+    const presets = getPresetsForUi();
     return {
       rootPath: game.settings.get(MODULE_ID, "rootPath"),
       menuDescription: game.i18n.localize("PLAYLISTSYNC.MenuDescription"),
@@ -42,7 +58,20 @@ class PlaylistSyncMenu extends FormApplication {
       menuLabel: game.i18n.localize("PLAYLISTSYNC.MenuLabel"),
       menuNote1: game.i18n.localize("PLAYLISTSYNC.MenuNote1"),
       menuButton: game.i18n.localize("PLAYLISTSYNC.MenuButton"),
-      menuNote2: game.i18n.localize("PLAYLISTSYNC.MenuNote2")
+      menuNote2: game.i18n.localize("PLAYLISTSYNC.MenuNote2"),
+
+      presetsTitle: game.i18n.localize("PLAYLISTSYNC.PresetsTitle"),
+      presetsHint: game.i18n.localize("PLAYLISTSYNC.PresetsHint"),
+      presetsAdd: game.i18n.localize("PLAYLISTSYNC.PresetsAdd"),
+      presetsEmpty: game.i18n.localize("PLAYLISTSYNC.PresetsEmpty"),
+
+      presets: presets,
+      channels: {
+        music: game.i18n.localize("PLAYLISTSYNC.ChannelMusic"),
+        environment: game.i18n.localize("PLAYLISTSYNC.ChannelEnvironment"),
+        interface: game.i18n.localize("PLAYLISTSYNC.ChannelInterface")
+      }
+
     };
   }
 
@@ -56,6 +85,77 @@ class PlaylistSyncMenu extends FormApplication {
     html.find('input[name="rootPath"]').on("change", async (ev) => {
       const value = String(ev.currentTarget.value ?? "").trim();
       await game.settings.set(MODULE_ID, "rootPath", value);
+      this.render(false);
+    });
+
+    // Presets UI
+    html.find('button[data-action="add-preset"]').on("click", async () => {
+      const presets = getPresetsRaw();
+      presets.push(makeDefaultPreset());
+      await savePresets(presets);
+      this.render(false);
+    });
+
+    html.find('button[data-action="delete-preset"]').on("click", async (ev) => {
+      const idx = Number(ev.currentTarget?.dataset?.index);
+      if (!Number.isFinite(idx)) return;
+      const presets = getPresetsRaw();
+      presets.splice(idx, 1);
+      await savePresets(presets);
+      this.render(false);
+    });
+
+    html.find('button[data-action="move-preset"]').on("click", async (ev) => {
+      const idx = Number(ev.currentTarget?.dataset?.index);
+      const dir = String(ev.currentTarget?.dataset?.dir ?? "");
+      if (!Number.isFinite(idx) || !dir) return;
+
+      const presets = getPresetsRaw();
+      const j = dir === "up" ? idx - 1 : dir === "down" ? idx + 1 : idx;
+      if (j < 0 || j >= presets.length || j === idx) return;
+
+      const tmp = presets[idx];
+      presets[idx] = presets[j];
+      presets[j] = tmp;
+
+      await savePresets(presets);
+      this.render(false);
+    });
+
+    // Any preset field change
+    html.find(".playlist-sync-preset").on("change", "input, select", async (ev) => {
+      const el = ev.currentTarget;
+      const idx = Number(el?.dataset?.index);
+      const field = String(el?.dataset?.field ?? "");
+      if (!Number.isFinite(idx) || !field) return;
+
+      const presets = getPresetsRaw();
+      const p = presets[idx] ?? makeDefaultPreset();
+
+      let v;
+      if (el.type === "checkbox") v = !!el.checked;
+      else v = String(el.value ?? "");
+
+      switch (field) {
+        case "pattern":
+          p.pattern = String(v).trim();
+          break;
+        case "volume":
+          p.volume = clamp01(Number(v));
+          break;
+        case "repeat":
+          p.repeat = !!v;
+          break;
+        case "channel":
+          p.channel = String(v);
+          break;
+        case "fade":
+          p.fade = Math.max(0, Math.trunc(Number(v) || 0));
+          break;
+      }
+
+      presets[idx] = sanitizePreset(p);
+      await savePresets(presets);
       this.render(false);
     });
   }
@@ -89,7 +189,10 @@ class PlaylistSyncMenu extends FormApplication {
 
     const plan = buildSyncPlan(files, rootPath);
 
-    const result = await applySyncPlan(plan);
+    // Compile presets once
+    const compiledPresets = compilePresets(getPresetsRaw());
+
+    const result = await applySyncPlan(plan, compiledPresets);
 
     const dt = ((Date.now() - t0) / 1000).toFixed(1);
     ui.notifications.info(
@@ -102,11 +205,24 @@ class PlaylistSyncMenu extends FormApplication {
   }
 }
 
+function localizeWithFallback(key, fallback) {
+  try {
+    if (game?.i18n?.has?.(key)) return game.i18n.localize(key);
+  } catch {}
+  return fallback;
+}
+
 function normalizePath(p) {
   return String(p ?? "")
     .replace(/\\/g, "/")
     .replace(/^\/+/, "")
     .replace(/\/+$/, "");
+}
+
+function clamp01(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0;
+  return Math.min(1, Math.max(0, x));
 }
 
 function splitPath(p) {
@@ -121,6 +237,98 @@ function safeDecode(str) {
   } catch {
     return s; // если строка невалидная, не падаем
   }
+}
+
+function getPresetsRaw() {
+  const v = game.settings.get(MODULE_ID, "presets");
+  return Array.isArray(v) ? v.map((p) => ({ ...p })) : [];
+}
+
+async function savePresets(presets) {
+  const clean = Array.isArray(presets) ? presets.map(sanitizePreset) : [];
+  await game.settings.set(MODULE_ID, "presets", clean);
+}
+
+function makeDefaultPreset() {
+  return {
+    id: foundry.utils.randomID(),
+    pattern: "audio/ambient",
+    volume: 0.8,
+    repeat: false,
+    channel: "environment",
+    fade: 1000
+  };
+}
+
+function sanitizePreset(p) {
+  const out = {
+    id: String(p?.id || foundry.utils.randomID()),
+    pattern: String(p?.pattern ?? "").trim(),
+    volume: clamp01(p?.volume ?? 0.8),
+    repeat: !!p?.repeat,
+    channel: ["music", "environment", "interface"].includes(String(p?.channel))
+      ? String(p.channel)
+      : "music",
+    fade: Math.max(0, Math.trunc(Number(p?.fade) || 0))
+  };
+  return out;
+}
+
+function parseRegexString(pattern) {
+  const s = String(pattern ?? "").trim();
+  if (!s) return { source: null, flags: null, error: new Error("empty") };
+  const m = s.match(/^\/(.*)\/([dgimsuy]*)$/);
+  if (m) return { source: m[1], flags: m[2], error: null };
+  return { source: s, flags: "", error: null };
+}
+
+function compilePresets(presets) {
+  const compiled = [];
+  for (const raw of Array.isArray(presets) ? presets : []) {
+    const p = sanitizePreset(raw);
+    const parsed = parseRegexString(p.pattern);
+    if (parsed.error) continue;
+    try {
+      const re = new RegExp(parsed.source, parsed.flags || "");
+      compiled.push({ ...p, re });
+    } catch (err) {
+      console.warn(`${MODULE_ID} | bad preset regex:`, p.pattern, err);
+      // Без всплывашек: не хочется спамить при каждом рендере
+    }
+  }
+  return compiled;
+}
+
+function getPresetsForUi() {
+  return getPresetsRaw().map((raw) => {
+    const p = sanitizePreset(raw);
+    const parsed = parseRegexString(p.pattern);
+    let valid = true;
+    let error = "";
+    if (parsed.error) {
+      valid = false;
+      error = parsed.error.message;
+    } else {
+      try {
+        // eslint-disable-next-line no-new
+        new RegExp(parsed.source, parsed.flags || "");
+      } catch (e) {
+        valid = false;
+        error = String(e?.message ?? e);
+      }
+    }
+    return { ...p, _valid: valid, _error: error };
+  });
+}
+
+function matchPresetForPlaylistPath(playlistPath, compiledPresets) {
+  const pth = normalizePath(safeDecode(playlistPath));
+  for (const p of compiledPresets ?? []) {
+    try {
+      if (p?.re?.test?.(pth)) return p;
+    } catch {}
+  }
+  return null;
 }
 
 function encodePathName(name) {
@@ -185,7 +393,7 @@ async function collectAudioFilesRecursive(source, dir) {
 function buildSyncPlan(files, rootPath) {
   const rootParts = splitPath(rootPath);
 
-  /** @type {Map<string, Map<string, string[]>>} category -> playlistName -> files[] */
+  /** @type {Map<string, Map<string, {files: string[], fsPath: string}>>} category -> playlistName -> meta */
   const plan = new Map();
 
   for (const full of files) {
@@ -208,23 +416,28 @@ function buildSyncPlan(files, rootPath) {
     const playlistPathParts = rel.slice(1, -1).map(safeDecode);
 
     // если подпапок нет, плейлист = имя папки category
-    const playlistName = playlistPathParts.length ? playlistPathParts.join("/") : category;
+    const playlistSubPath = playlistPathParts.length ? playlistPathParts.join("/") : "";
+    const playlistName = playlistSubPath || category;
 
     if (!playlistName) continue;
+
+    const fsPath = normalizePath(
+      `${safeDecode(rootPath)}/${category}${playlistSubPath ? `/${playlistSubPath}` : ""}`
+    );
 
 
     if (!plan.has(category)) plan.set(category, new Map());
     const catMap = plan.get(category);
 
-    if (!catMap.has(playlistName)) catMap.set(playlistName, []);
-    catMap.get(playlistName).push(full);
+    if (!catMap.has(playlistName)) catMap.set(playlistName, { files: [], fsPath });
+    catMap.get(playlistName).files.push(full);
   }
 
   // сортируем файлы внутри каждой группы
   for (const [, catMap] of plan) {
-    for (const [pl, arr] of catMap) {
-      arr.sort((a, b) => decodedFileStem(a).localeCompare(decodedFileStem(b), "ru"));
-      catMap.set(pl, arr);
+    for (const [pl, meta] of catMap) {
+      meta.files.sort((a, b) => decodedFileStem(a).localeCompare(decodedFileStem(b), "ru"));
+      catMap.set(pl, meta);
     }
   }
 
@@ -259,17 +472,54 @@ async function getOrCreatePlaylist(name, folderId) {
   );
 }
 
-async function replacePlaylistSounds(playlist, filePaths) {
+async function applyPlaylistPreset(playlist, preset) {
+  if (!preset) return;
+
+  const data = playlist.toObject();
+  const update = {};
+
+  if (typeof preset.volume === "number" && Number.isFinite(preset.volume) && Object.hasOwn(data, "volume")) {
+    update.volume = clamp01(preset.volume);
+  }
+  if (Object.hasOwn(data, "repeat")) {
+    update.repeat = !!preset.repeat;
+  }
+  if (Object.hasOwn(data, "channel")) {
+    update.channel = preset.channel;
+  }
+
+  if (Object.keys(update).length) {
+    await playlist.update(update, { render: false });
+  }
+}
+
+async function replacePlaylistSounds(playlist, filePaths, preset, category) {
   const existingIds = playlist.sounds?.map((s) => s.id) ?? [];
   if (existingIds.length) {
     await playlist.deleteEmbeddedDocuments("PlaylistSound", existingIds);
   }
 
+  const hasPresetVolume = typeof preset?.volume === "number" && Number.isFinite(preset.volume);
+  const hasPlaylistVolume = (() => {
+    try {
+      return Object.hasOwn(playlist.toObject(), "volume");
+    } catch {
+      return false;
+    }
+  })();
+
+  const perSoundVolume = hasPresetVolume && hasPlaylistVolume ? 1.0 : 0.8; // чтобы не умножать громкость дважды
+  const repeat = typeof preset?.repeat === "boolean" ? preset.repeat : false;
+  const channel = preset?.channel;
+  const fade = Number.isFinite(Number(preset?.fade)) ? Math.max(0, Math.trunc(Number(preset.fade))) : null;
+
   const soundsData = filePaths.map((path, i) => ({
     name: decodedFileStem(path),
     path,
-    repeat: false,
-    volume: 0.8,
+    repeat,
+    volume: perSoundVolume,
+    ...(channel ? { channel } : {}),
+    ...(fade !== null ? { fade } : {}),
     sort: (i + 1) * 10
   }));
 
@@ -280,16 +530,20 @@ async function replacePlaylistSounds(playlist, filePaths) {
   return soundsData.length;
 }
 
-async function applySyncPlan(plan) {
+async function applySyncPlan(plan, compiledPresets) {
   let playlistsTouched = 0;
   let soundsCreated = 0;
 
   for (const [category, playlists] of plan.entries()) {
     const folder = await getOrCreatePlaylistFolder(category);
 
-    for (const [playlistName, files] of playlists.entries()) {
+    for (const [playlistName, meta] of playlists.entries()) {
       const playlist = await getOrCreatePlaylist(playlistName, folder.id);
-      const created = await replacePlaylistSounds(playlist, files);
+
+      const preset = matchPresetForPlaylistPath(meta.fsPath, compiledPresets);
+      await applyPlaylistPreset(playlist, preset);
+
+      const created = await replacePlaylistSounds(playlist, meta.files, preset, category);
 
       playlistsTouched += 1;
       soundsCreated += created;

@@ -24,6 +24,17 @@
     "MenuLabel": "Root Folder",
     "MenuNote1": "Default: <code>assets/audio</code>. Use slashes <code>/</code>, not <code>\\</code>.",
     "MenuButton": "Synchronize",
-    "MenuNote2": "Important: requires GM access. Sounds in found playlists will be recreated."
+    "MenuNote2": "Important: requires GM access. Sounds in found playlists will be recreated.",
+    "Presets": {
+      "name": "Presets",
+      "hint": "Presets allow customizing volume, repeat, channel, and fade settings for playlists based on their path patterns."
+    },
+    "PresetsTitle": "Presets",
+    "PresetsHint": "Presets are applied by first regex match against the playlist path: <rootPath>/<category>/<subdirs>.",
+    "PresetsAdd": "Add Preset",
+    "PresetsEmpty": "No presets yet. Everything as usual.",
+    "ChannelMusic": "Music",
+    "ChannelEnvironment": "Environment",
+    "ChannelInterface": "Interface/FX"
   }
 }

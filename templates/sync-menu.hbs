@@ -21,6 +21,75 @@
 
   <hr/>
 
+  <h3>{{presetsTitle}}</h3>
+  <p class="notes">{{{presetsHint}}}</p>
+
+  <div class="form-group">
+    <button type="button" data-action="add-preset">
+      <i class="fas fa-plus"></i> {{presetsAdd}}
+    </button>
+  </div>
+
+  {{#if presets.length}}
+    <ol class="playlist-sync-preset" style="margin: 0; padding-left: 1.25rem;">
+      {{#each presets as |p idx|}}
+        <li style="margin-bottom: .75rem;">
+          <div class="form-group" style="align-items: center; gap: .5rem;">
+            <label style="flex: 0 0 110px;">RegExp</label>
+            <div class="form-fields" style="flex: 1 1 auto;">
+              <input type="text" value="{{p.pattern}}" data-index="{{idx}}" data-field="pattern" placeholder="audio/ambient|audio/music" />
+            </div>
+            <button type="button" data-action="move-preset" data-dir="up" data-index="{{idx}}" title="Вверх">
+              <i class="fas fa-chevron-up"></i>
+            </button>
+            <button type="button" data-action="move-preset" data-dir="down" data-index="{{idx}}" title="Вниз">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+            <button type="button" data-action="delete-preset" data-index="{{idx}}" title="Удалить">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+
+          {{#unless p._valid}}
+            <p class="notes" style="color: var(--color-level-error); margin-top: -0.25rem;">
+              Невалидное RegExp: {{p._error}}
+            </p>
+          {{/unless}}
+
+          <div class="form-group" style="gap: .5rem;">
+            <label style="flex: 0 0 110px;">Громкость</label>
+            <div class="form-fields" style="flex: 1 1 auto;">
+              <input type="number" min="0" max="1" step="0.05" value="{{p.volume}}" data-index="{{idx}}" data-field="volume" />
+            </div>
+
+            <label style="flex: 0 0 70px; text-align:right;">Повтор</label>
+            <div class="form-fields" style="flex: 0 0 auto;">
+              <input type="checkbox" {{#if p.repeat}}checked{{/if}} data-index="{{idx}}" data-field="repeat" />
+            </div>
+          </div>
+
+          <div class="form-group" style="gap: .5rem;">
+            <label style="flex: 0 0 110px;">Канал</label>
+            <div class="form-fields" style="flex: 1 1 auto;">
+              <select data-index="{{idx}}" data-field="channel">
+                {{selectOptions ../channels selected=p.channel}}
+              </select>
+            </div>
+
+            <label style="flex: 0 0 70px; text-align:right;">Fade, мс</label>
+            <div class="form-fields" style="flex: 0 0 120px;">
+              <input type="number" min="0" step="50" value="{{p.fade}}" data-index="{{idx}}" data-field="fade" />
+            </div>
+          </div>
+        </li>
+      {{/each}}
+    </ol>
+  {{else}}
+    <p class="notes">{{presetsEmpty}}</p>
+  {{/if}}
+
+  <hr/>
+
   <div class="form-group">
     <button type="button" data-action="sync">
       <i class="fas fa-rotate"></i> {{menuButton}}
