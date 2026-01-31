@@ -4,8 +4,8 @@ const AUDIO_EXTENSIONS = [".mp3", ".ogg", ".wav", ".flac", ".m4a", ".webm", ".aa
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "rootPath", {
-    name: () => game.i18n.localize("PLAYLISTSYNC.RootPath.name"),
-    hint: () => game.i18n.localize("PLAYLISTSYNC.RootPath.hint"),
+    name: "PLAYLISTSYNC.RootPath.name",
+    hint: "PLAYLISTSYNC.RootPath.hint",
     scope: "world",
     config: true,
     type: String,
@@ -13,9 +13,9 @@ Hooks.once("init", () => {
   });
 
   game.settings.registerMenu(MODULE_ID, "syncMenu", {
-    name: () => game.i18n.localize("PLAYLISTSYNC.SyncMenu.name"),
-    label: () => game.i18n.localize("PLAYLISTSYNC.SyncMenu.label"),
-    hint: () => game.i18n.localize("PLAYLISTSYNC.SyncMenu.hint"),
+    name: "PLAYLISTSYNC.SyncMenu.name",
+    label: "PLAYLISTSYNC.SyncMenu.label",
+    hint: "PLAYLISTSYNC.SyncMenu.hint",
     type: PlaylistSyncMenu,
     restricted: true
   });
@@ -25,7 +25,7 @@ class PlaylistSyncMenu extends FormApplication {
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
       id: "playlist-sync-menu",
-      title: game.i18n.localize("PLAYLISTSYNC.MenuTitle"),
+      title: () => game.i18n.localize("PLAYLISTSYNC.MenuTitle"),
       template: `modules/${MODULE_ID}/templates/sync-menu.hbs`,
       width: 520,
       closeOnSubmit: false
