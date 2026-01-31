@@ -186,13 +186,18 @@ function buildSyncPlan(files, rootPath) {
     }
 
     const rel = parts.slice(start); // <category>/<subdirs...>/<file>
-    if (rel.length < 3) continue; // нужно минимум category/playlist/file
+    if (rel.length < 2) continue;   // минимум category/file
 
     const category = safeDecode(rel[0]);
+
+    // subdirs... (может быть пусто)
     const playlistPathParts = rel.slice(1, -1).map(safeDecode);
-    const playlistName = playlistPathParts.join("/");
+
+    // если подпапок нет, плейлист = имя папки category
+    const playlistName = playlistPathParts.length ? playlistPathParts.join("/") : category;
 
     if (!playlistName) continue;
+
 
     if (!plan.has(category)) plan.set(category, new Map());
     const catMap = plan.get(category);
