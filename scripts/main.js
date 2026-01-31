@@ -5,17 +5,17 @@ const AUDIO_EXTENSIONS = [".mp3", ".ogg", ".wav", ".flac", ".m4a", ".webm", ".aa
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "rootPath", {
     name: "Корневая папка аудио",
-    hint: "Папка внутри Data, которую нужно просканировать (по умолчанию audio).",
+    hint: "Папка внутри Data, которую нужно просканировать (по умолчанию assets/audio).",
     scope: "world",
     config: true,
     type: String,
-    default: "audio"
+    default: "assets/audio"
   });
 
   game.settings.registerMenu(MODULE_ID, "syncMenu", {
     name: "Синхронизация плейлистов",
     label: "Открыть",
-    hint: "Создать/обновить плейлисты по структуре папок в Data/audio.",
+    hint: "Создать/обновить плейлисты по структуре папок в Data/assets/audio.",
     type: PlaylistSyncMenu,
     restricted: true
   });
@@ -62,7 +62,7 @@ class PlaylistSyncMenu extends FormApplication {
       return;
     }
 
-    const rootPath = normalizePath(game.settings.get(MODULE_ID, "rootPath") || "audio");
+    const rootPath = normalizePath(game.settings.get(MODULE_ID, "rootPath") || "assets/audio");
     ui.notifications.info(`Playlist Sync: сканирую Data/${rootPath} ...`);
 
     const t0 = Date.now();
@@ -178,7 +178,7 @@ function buildSyncPlan(files, rootPath) {
     const parts = splitPath(full);
 
     // найти индекс rootPath в пути
-    // Обычно rootPath = "audio", тогда parts начинается с ["audio", ...]
+    // Обычно rootPath = "assets/audio", тогда parts начинается с ["assets/audio", ...]
     let start = 0;
     if (rootParts.length > 0) {
       const candidate = parts.slice(0, rootParts.length).join("/");
