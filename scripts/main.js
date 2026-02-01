@@ -617,9 +617,7 @@ async function applyPlaylistPreset(playlist, preset) {
   const data = playlist.toObject();
   const update = {};
 
-  if (typeof preset.volume === "number" && Number.isFinite(preset.volume) && Object.hasOwn(data, "volume")) {
-    update.volume = clamp01(preset.volume);
-  }
+  // Громкость применяется на звуки, а не на плейлист
   if (Object.hasOwn(data, "repeat")) {
     update.repeat = !!preset.repeat;
   }
@@ -649,15 +647,7 @@ async function replacePlaylistSounds(playlist, filePaths, preset, options = {}) 
   }
 
   const hasPresetVolume = typeof preset?.volume === "number" && Number.isFinite(preset.volume);
-  const hasPlaylistVolume = (() => {
-    try {
-      return Object.hasOwn(playlist.toObject(), "volume");
-    } catch {
-      return false;
-    }
-  })();
-
-  const perSoundVolume = hasPresetVolume && hasPlaylistVolume ? 1.0 : 0.8; // чтобы не умножать громкость дважды
+  const perSoundVolume = hasPresetVolume ? clamp01(preset.volume) : 0.8;
   const repeat = typeof preset?.repeat === "boolean" ? preset.repeat : false;
   const channel = preset?.channel;
   const fade = Number.isFinite(Number(preset?.fade)) ? Math.max(0, Math.trunc(Number(preset.fade))) : null;
