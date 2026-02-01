@@ -49,6 +49,10 @@
     "PresetModeSequential": "Последовательный",
     "PresetModeShuffle": "Перемешивание",
     "PresetModeSimultaneous": "Одновременный",
-    "PresetModeManual": "Вручную"
+    "PresetModeManual": "Вручную",
+    "FlattenPaths": {
+      "name": "Сводить подпапки в теги",
+      "hint": "Создавать один плейлист на верхнюю папку (category). Звуки из подпапок добавляются в корневой плейлист, а их имена получают префикс‑тег, например [horror] home. Пресеты сопоставляются по пути <rootPath>/<category>."
+    }
   }
 }

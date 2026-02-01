@@ -21,6 +21,16 @@
 
   <hr/>
 
+  <div class="form-group">
+    <label>{{flattenLabel}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="flattenPaths" {{#if flattenPaths}}checked{{/if}} />
+    </div>
+    <p class="notes">{{{flattenHint}}}</p>
+  </div>
+
+  <hr/>
+
   <h3>{{presetsTitle}}</h3>
   <p class="notes">{{{presetsHint}}}</p>
 

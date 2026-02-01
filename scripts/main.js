@@ -12,6 +12,16 @@ Hooks.once("init", () => {
     default: "assets/audio"
   });
 
+  game.settings.register(MODULE_ID, "flattenPaths", {
+    name: "PLAYLISTSYNC.FlattenPaths.name",
+    hint: "PLAYLISTSYNC.FlattenPaths.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+
   // Presets:
   //  - pattern: JS RegExp (plain source like "audio/ambient" or literal like "/audio\\/ambient/i")
   //  - volume: 0..1 (playlist volume)
@@ -52,6 +62,9 @@ class PlaylistSyncMenu extends FormApplication {
     const presets = getPresetsForUi();
     return {
       rootPath: game.settings.get(MODULE_ID, "rootPath"),
+      flattenPaths: game.settings.get(MODULE_ID, "flattenPaths"),
+      flattenLabel: game.i18n.localize("PLAYLISTSYNC.FlattenPaths.name"),
+      flattenHint: game.i18n.localize("PLAYLISTSYNC.FlattenPaths.hint"),
       menuDescription: game.i18n.localize("PLAYLISTSYNC.MenuDescription"),
       menuExample1: game.i18n.format("PLAYLISTSYNC.MenuExample1", { rootPath: game.settings.get(MODULE_ID, "rootPath") }),
       menuExample2: game.i18n.localize("PLAYLISTSYNC.MenuExample2"),
@@ -106,6 +119,12 @@ class PlaylistSyncMenu extends FormApplication {
     html.find('input[name="rootPath"]').on("change", async (ev) => {
       const value = String(ev.currentTarget.value ?? "").trim();
       await game.settings.set(MODULE_ID, "rootPath", value);
+      this.render(false);
+    });
+
+    html.find('input[name="flattenPaths"]').on("change", async (ev) => {
+      const value = !!ev.currentTarget.checked;
+      await game.settings.set(MODULE_ID, "flattenPaths", value);
       this.render(false);
     });
 
@@ -211,12 +230,14 @@ class PlaylistSyncMenu extends FormApplication {
       return;
     }
 
-    const plan = buildSyncPlan(files, rootPath);
+    const flattenPaths = !!game.settings.get(MODULE_ID, "flattenPaths");
+
+    const plan = buildSyncPlan(files, rootPath, flattenPaths);
 
     // Compile presets once
     const compiledPresets = compilePresets(getPresetsRaw());
 
-    const result = await applySyncPlan(plan, compiledPresets);
+    const result = await applySyncPlan(plan, compiledPresets, { rootPath, flattenPaths });
 
     const dt = ((Date.now() - t0) / 1000).toFixed(1);
     ui.notifications.info(
@@ -306,6 +327,47 @@ function safeDecode(str) {
     return s; // если строка невалидная, не падаем
   }
 }
+
+
+function getFileMetaUnderRoot(fullPath, rootPath) {
+  const rootParts = splitPath(rootPath);
+  const parts = splitPath(fullPath);
+
+  // найти индекс rootPath в пути
+  let start = 0;
+  if (rootParts.length > 0) {
+    const candidate = parts.slice(0, rootParts.length).join("/");
+    if (candidate === rootParts.join("/")) start = rootParts.length;
+  }
+
+  const rel = parts.slice(start); // <category>/<subdirs...>/<file>
+  if (rel.length < 2) return null;
+
+  const category = safeDecode(rel[0]);
+  const subdirs = rel.slice(1, -1).map(safeDecode);
+
+  return { category, subdirs };
+}
+
+function taggedSoundName(fullPath, rootPath) {
+  const base = decodedFileStem(fullPath);
+  const meta = getFileMetaUnderRoot(fullPath, rootPath);
+  if (!meta) return base;
+
+  const tag = meta.subdirs.length ? meta.subdirs.join("/") : "";
+  return tag ? `[${tag}] ${base}` : base;
+}
+
+function taggedSoundSortKey(fullPath, rootPath) {
+  // чтобы сортировка была предсказуемой: сначала тег (если есть), потом имя
+  const base = decodedFileStem(fullPath);
+  const meta = getFileMetaUnderRoot(fullPath, rootPath);
+  if (!meta) return base;
+
+  const tag = meta.subdirs.length ? meta.subdirs.join("/") : "";
+  return tag ? `${tag} ${base}` : base;
+}
+
 
 function getPresetsRaw() {
   const v = game.settings.get(MODULE_ID, "presets");
@@ -457,44 +519,32 @@ async function collectAudioFilesRecursive(source, dir) {
 /**
  * Правило:
  *  Data/<rootPath>/<category>/<subdirs...>/<file>
- *  category => Folder (Playlist)
+ *  category => Folder (Playlist) (если режим не "плоский")
  *  playlistName => subdirs... (как путь, например "battle" или "horror/crypt")
+ *
+ * Если включён "плоский" режим (FlattenPaths):
+ *  - создаётся только один плейлист на category
+ *  - все файлы из подпапок добавляются в корневой плейлист
+ *  - имена звуков получают префикс-тег из подпапок: "[horror] home" или "[horror/crypt] home"
  */
-function buildSyncPlan(files, rootPath) {
-  const rootParts = splitPath(rootPath);
-
+function buildSyncPlan(files, rootPath, flattenPaths = false) {
   /** @type {Map<string, Map<string, {files: string[], fsPath: string}>>} category -> playlistName -> meta */
   const plan = new Map();
 
   for (const full of files) {
-    const parts = splitPath(full);
+    const meta = getFileMetaUnderRoot(full, rootPath);
+    if (!meta) continue;
 
-    // найти индекс rootPath в пути
-    // Обычно rootPath = "assets/audio", тогда parts начинается с ["assets/audio", ...]
-    let start = 0;
-    if (rootParts.length > 0) {
-      const candidate = parts.slice(0, rootParts.length).join("/");
-      if (candidate === rootParts.join("/")) start = rootParts.length;
-    }
+    const { category, subdirs } = meta;
 
-    const rel = parts.slice(start); // <category>/<subdirs...>/<file>
-    if (rel.length < 2) continue;   // минимум category/file
+    const playlistSubPath = subdirs.length ? subdirs.join("/") : "";
 
-    const category = safeDecode(rel[0]);
-
-    // subdirs... (может быть пусто)
-    const playlistPathParts = rel.slice(1, -1).map(safeDecode);
-
-    // если подпапок нет, плейлист = имя папки category
-    const playlistSubPath = playlistPathParts.length ? playlistPathParts.join("/") : "";
-    const playlistName = playlistSubPath || category;
-
+    const playlistName = flattenPaths ? category : (playlistSubPath || category);
     if (!playlistName) continue;
 
     const fsPath = normalizePath(
-      `${safeDecode(rootPath)}/${category}${playlistSubPath ? `/${playlistSubPath}` : ""}`
+      `${safeDecode(rootPath)}/${category}${(!flattenPaths && playlistSubPath) ? `/${playlistSubPath}` : ""}`
     );
-
 
     if (!plan.has(category)) plan.set(category, new Map());
     const catMap = plan.get(category);
@@ -506,7 +556,11 @@ function buildSyncPlan(files, rootPath) {
   // сортируем файлы внутри каждой группы
   for (const [, catMap] of plan) {
     for (const [pl, meta] of catMap) {
-      meta.files.sort((a, b) => decodedFileStem(a).localeCompare(decodedFileStem(b), "ru"));
+      meta.files.sort((a, b) => {
+        const ka = flattenPaths ? taggedSoundSortKey(a, rootPath) : decodedFileStem(a);
+        const kb = flattenPaths ? taggedSoundSortKey(b, rootPath) : decodedFileStem(b);
+        return ka.localeCompare(kb, "ru");
+      });
       catMap.set(pl, meta);
     }
   }
@@ -527,7 +581,22 @@ async function getOrCreatePlaylistFolder(name) {
   });
 }
 
-async function getOrCreatePlaylist(name, folderId) {
+async function getOrCreatePlaylist(name, folderId, options = {}) {
+  const { preferAnyFolder = false } = options || {};
+
+  // В "плоском" режиме лучше переиспользовать существующий плейлист с тем же именем,
+  // даже если он лежит внутри папки (чтобы не плодить дубликаты).
+  if (preferAnyFolder && folderId == null) {
+    const existingAny = game.playlists?.find((p) => p.name === name);
+    if (existingAny) {
+      // при желании выносим в корень
+      if ((existingAny.folder?.id ?? null) !== null) {
+        await existingAny.update({ folder: null }, { render: false });
+      }
+      return existingAny;
+    }
+  }
+
   const existing = game.playlists?.find(
     (p) => p.name === name && (p.folder?.id ?? null) === folderId
   );
@@ -571,7 +640,9 @@ async function applyPlaylistPreset(playlist, preset) {
   }
 }
 
-async function replacePlaylistSounds(playlist, filePaths, preset, category) {
+async function replacePlaylistSounds(playlist, filePaths, preset, options = {}) {
+  const { rootPath = "", flattenPaths = false } = options || {};
+
   const existingIds = playlist.sounds?.map((s) => s.id) ?? [];
   if (existingIds.length) {
     await playlist.deleteEmbeddedDocuments("PlaylistSound", existingIds);
@@ -592,7 +663,7 @@ async function replacePlaylistSounds(playlist, filePaths, preset, category) {
   const fade = Number.isFinite(Number(preset?.fade)) ? Math.max(0, Math.trunc(Number(preset.fade))) : null;
 
   const soundsData = filePaths.map((path, i) => ({
-    name: decodedFileStem(path),
+    name: flattenPaths ? taggedSoundName(path, rootPath) : decodedFileStem(path),
     path,
     repeat,
     volume: perSoundVolume,
@@ -608,20 +679,22 @@ async function replacePlaylistSounds(playlist, filePaths, preset, category) {
   return soundsData.length;
 }
 
-async function applySyncPlan(plan, compiledPresets) {
+async function applySyncPlan(plan, compiledPresets, options = {}) {
+  const { rootPath = "", flattenPaths = false } = options || {};
+
   let playlistsTouched = 0;
   let soundsCreated = 0;
 
   for (const [category, playlists] of plan.entries()) {
-    const folder = await getOrCreatePlaylistFolder(category);
+    const folderId = flattenPaths ? null : (await getOrCreatePlaylistFolder(category)).id;
 
     for (const [playlistName, meta] of playlists.entries()) {
-      const playlist = await getOrCreatePlaylist(playlistName, folder.id);
+      const playlist = await getOrCreatePlaylist(playlistName, folderId, { preferAnyFolder: flattenPaths });
 
       const preset = matchPresetForPlaylistPath(meta.fsPath, compiledPresets);
       await applyPlaylistPreset(playlist, preset);
 
-      const created = await replacePlaylistSounds(playlist, meta.files, preset, category);
+      const created = await replacePlaylistSounds(playlist, meta.files, preset, { rootPath, flattenPaths });
 
       playlistsTouched += 1;
       soundsCreated += created;

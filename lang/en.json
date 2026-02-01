@@ -49,6 +49,10 @@
     "PresetModeSequential": "Sequential",
     "PresetModeShuffle": "Shuffle",
     "PresetModeSimultaneous": "Simultaneous",
-    "PresetModeManual": "Manual"
+    "PresetModeManual": "Manual",
+    "FlattenPaths": {
+      "name": "Flatten subfolders into tags",
+      "hint": "Create one playlist per top-level folder (category). Sounds from subfolders are added into the root playlist and their names are prefixed with tags like [horror] home. Presets match <rootPath>/<category>."
+    }
   }
 }
