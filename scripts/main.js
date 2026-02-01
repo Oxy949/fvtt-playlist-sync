@@ -21,6 +21,107 @@ Hooks.once("init", () => {
     default: false
   });
 
+  // Sound synchronization behavior. Recreating sounds breaks UUID references in the world.
+  game.settings.register(MODULE_ID, "soundSyncStrategy", {
+    name: "PLAYLISTSYNC.SoundSyncStrategy.name",
+    hint: "PLAYLISTSYNC.SoundSyncStrategy.hint",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: {
+      merge: "PLAYLISTSYNC.SoundSyncStrategy.merge",
+      recreate: "PLAYLISTSYNC.SoundSyncStrategy.recreate"
+    },
+    default: "merge"
+  });
+
+  // How we match a filesystem file to an existing PlaylistSound.
+  game.settings.register(MODULE_ID, "soundMatchMode", {
+    name: "PLAYLISTSYNC.SoundMatchMode.name",
+    hint: "PLAYLISTSYNC.SoundMatchMode.hint",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: {
+      name: "PLAYLISTSYNC.SoundMatchMode.nameChoice",
+      path: "PLAYLISTSYNC.SoundMatchMode.pathChoice",
+      stem: "PLAYLISTSYNC.SoundMatchMode.stemChoice"
+    },
+    default: "name"
+  });
+
+  // What to do with sounds that exist in the playlist but are not found on disk.
+  game.settings.register(MODULE_ID, "orphanPolicy", {
+    name: "PLAYLISTSYNC.OrphanPolicy.name",
+    hint: "PLAYLISTSYNC.OrphanPolicy.hint",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: {
+      keep: "PLAYLISTSYNC.OrphanPolicy.keep",
+      deleteManaged: "PLAYLISTSYNC.OrphanPolicy.deleteManaged",
+      deleteAll: "PLAYLISTSYNC.OrphanPolicy.deleteAll"
+    },
+    default: "keep"
+  });
+
+  // Fine-grained update toggles (only used for merge strategy).
+  game.settings.register(MODULE_ID, "updateSoundParams", {
+    name: "PLAYLISTSYNC.UpdateSoundParams.name",
+    hint: "PLAYLISTSYNC.UpdateSoundParams.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "updateSoundPath", {
+    name: "PLAYLISTSYNC.UpdateSoundPath.name",
+    hint: "PLAYLISTSYNC.UpdateSoundPath.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "updateSoundName", {
+    name: "PLAYLISTSYNC.UpdateSoundName.name",
+    hint: "PLAYLISTSYNC.UpdateSoundName.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "updateSoundSort", {
+    name: "PLAYLISTSYNC.UpdateSoundSort.name",
+    hint: "PLAYLISTSYNC.UpdateSoundSort.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "markManagedSounds", {
+    name: "PLAYLISTSYNC.MarkManagedSounds.name",
+    hint: "PLAYLISTSYNC.MarkManagedSounds.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  // Prefer matching sounds by the module metadata (sourcePath flag) when available.
+  // Makes sync idempotent even if the sound name was changed (manually or by FVTT).
+  game.settings.register(MODULE_ID, "preferManagedMatch", {
+    name: "PLAYLISTSYNC.PreferManagedMatch.name",
+    hint: "PLAYLISTSYNC.PreferManagedMatch.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
 
   // Presets:
   //  - pattern: JS RegExp (plain source like "audio/ambient" or literal like "/audio\\/ambient/i")
@@ -53,7 +154,7 @@ class PlaylistSyncMenu extends FormApplication {
       id: "playlist-sync-menu",
       title: "PLAYLISTSYNC.MenuTitle",
       template: `modules/${MODULE_ID}/templates/sync-menu.hbs`,
-      width: 520,
+      width: 560,
       closeOnSubmit: false
     });
   }
@@ -73,6 +174,59 @@ class PlaylistSyncMenu extends FormApplication {
       menuNote1: game.i18n.localize("PLAYLISTSYNC.MenuNote1"),
       menuButton: game.i18n.localize("PLAYLISTSYNC.MenuButton"),
       menuNote2: game.i18n.localize("PLAYLISTSYNC.MenuNote2"),
+
+      soundSyncTitle: game.i18n.localize("PLAYLISTSYNC.SoundSyncTitle"),
+      soundSyncHint: game.i18n.localize("PLAYLISTSYNC.SoundSyncHint"),
+
+      soundSyncStrategy: game.settings.get(MODULE_ID, "soundSyncStrategy"),
+      soundSyncStrategyLabel: game.i18n.localize("PLAYLISTSYNC.SoundSyncStrategy.label"),
+      soundSyncStrategyHint: game.i18n.localize("PLAYLISTSYNC.SoundSyncStrategy.hint"),
+      soundStrategies: {
+        merge: localizeWithFallback("PLAYLISTSYNC.SoundSyncStrategy.merge", "Update existing (preserve references)"),
+        recreate: localizeWithFallback("PLAYLISTSYNC.SoundSyncStrategy.recreate", "Recreate all (break references)")
+      },
+
+      soundMatchMode: game.settings.get(MODULE_ID, "soundMatchMode"),
+      soundMatchModeLabel: game.i18n.localize("PLAYLISTSYNC.SoundMatchMode.label"),
+      soundMatchModeHint: game.i18n.localize("PLAYLISTSYNC.SoundMatchMode.hint"),
+      soundMatchModes: {
+        name: localizeWithFallback("PLAYLISTSYNC.SoundMatchMode.nameChoice", "By name"),
+        path: localizeWithFallback("PLAYLISTSYNC.SoundMatchMode.pathChoice", "By file path"),
+        stem: localizeWithFallback("PLAYLISTSYNC.SoundMatchMode.stemChoice", "By filename stem")
+      },
+
+      orphanPolicy: game.settings.get(MODULE_ID, "orphanPolicy"),
+      orphanPolicyLabel: game.i18n.localize("PLAYLISTSYNC.OrphanPolicy.label"),
+      orphanPolicyHint: game.i18n.localize("PLAYLISTSYNC.OrphanPolicy.hint"),
+      orphanPolicies: {
+        keep: localizeWithFallback("PLAYLISTSYNC.OrphanPolicy.keep", "Keep"),
+        deleteManaged: localizeWithFallback("PLAYLISTSYNC.OrphanPolicy.deleteManaged", "Delete only managed"),
+        deleteAll: localizeWithFallback("PLAYLISTSYNC.OrphanPolicy.deleteAll", "Delete all unmatched")
+      },
+
+      updateSoundParams: !!game.settings.get(MODULE_ID, "updateSoundParams"),
+      updateSoundParamsLabel: game.i18n.localize("PLAYLISTSYNC.UpdateSoundParams.label"),
+      updateSoundParamsHint: game.i18n.localize("PLAYLISTSYNC.UpdateSoundParams.hint"),
+
+      updateSoundPath: !!game.settings.get(MODULE_ID, "updateSoundPath"),
+      updateSoundPathLabel: game.i18n.localize("PLAYLISTSYNC.UpdateSoundPath.label"),
+      updateSoundPathHint: game.i18n.localize("PLAYLISTSYNC.UpdateSoundPath.hint"),
+
+      updateSoundName: !!game.settings.get(MODULE_ID, "updateSoundName"),
+      updateSoundNameLabel: game.i18n.localize("PLAYLISTSYNC.UpdateSoundName.label"),
+      updateSoundNameHint: game.i18n.localize("PLAYLISTSYNC.UpdateSoundName.hint"),
+
+      updateSoundSort: !!game.settings.get(MODULE_ID, "updateSoundSort"),
+      updateSoundSortLabel: game.i18n.localize("PLAYLISTSYNC.UpdateSoundSort.label"),
+      updateSoundSortHint: game.i18n.localize("PLAYLISTSYNC.UpdateSoundSort.hint"),
+
+      markManagedSounds: !!game.settings.get(MODULE_ID, "markManagedSounds"),
+      markManagedSoundsLabel: game.i18n.localize("PLAYLISTSYNC.MarkManagedSounds.label"),
+      markManagedSoundsHint: game.i18n.localize("PLAYLISTSYNC.MarkManagedSounds.hint"),
+
+      preferManagedMatch: !!game.settings.get(MODULE_ID, "preferManagedMatch"),
+      preferManagedMatchLabel: game.i18n.localize("PLAYLISTSYNC.PreferManagedMatch.label"),
+      preferManagedMatchHint: game.i18n.localize("PLAYLISTSYNC.PreferManagedMatch.hint"),
 
       presetsTitle: game.i18n.localize("PLAYLISTSYNC.PresetsTitle"),
       presetsHint: game.i18n.localize("PLAYLISTSYNC.PresetsHint"),
@@ -127,6 +281,30 @@ class PlaylistSyncMenu extends FormApplication {
       await game.settings.set(MODULE_ID, "flattenPaths", value);
       this.render(false);
     });
+
+    // Sound sync options (stored as world settings)
+    for (const key of ["soundSyncStrategy", "soundMatchMode", "orphanPolicy"]) {
+      html.find(`select[name="${key}"]`).on("change", async (ev) => {
+        const value = String(ev.currentTarget.value ?? "");
+        await game.settings.set(MODULE_ID, key, value);
+        this.render(false);
+      });
+    }
+
+    for (const key of [
+      "updateSoundParams",
+      "updateSoundPath",
+      "updateSoundName",
+      "updateSoundSort",
+      "markManagedSounds",
+      "preferManagedMatch"
+    ]) {
+      html.find(`input[name="${key}"]`).on("change", async (ev) => {
+        const value = !!ev.currentTarget.checked;
+        await game.settings.set(MODULE_ID, key, value);
+        this.render(false);
+      });
+    }
 
     // Presets UI
     html.find('button[data-action="add-preset"]').on("click", async () => {
@@ -232,19 +410,43 @@ class PlaylistSyncMenu extends FormApplication {
 
     const flattenPaths = !!game.settings.get(MODULE_ID, "flattenPaths");
 
+    const soundSyncStrategy = String(game.settings.get(MODULE_ID, "soundSyncStrategy") ?? "merge");
+    const soundMatchMode = String(game.settings.get(MODULE_ID, "soundMatchMode") ?? "name");
+    const orphanPolicy = String(game.settings.get(MODULE_ID, "orphanPolicy") ?? "keep");
+    const updateSoundParams = !!game.settings.get(MODULE_ID, "updateSoundParams");
+    const updateSoundPath = !!game.settings.get(MODULE_ID, "updateSoundPath");
+    const updateSoundName = !!game.settings.get(MODULE_ID, "updateSoundName");
+    const updateSoundSort = !!game.settings.get(MODULE_ID, "updateSoundSort");
+    const markManagedSounds = !!game.settings.get(MODULE_ID, "markManagedSounds");
+    const preferManagedMatch = !!game.settings.get(MODULE_ID, "preferManagedMatch");
+
     const plan = buildSyncPlan(files, rootPath, flattenPaths);
 
     // Compile presets once
     const compiledPresets = compilePresets(getPresetsRaw());
 
-    const result = await applySyncPlan(plan, compiledPresets, { rootPath, flattenPaths });
+    const result = await applySyncPlan(plan, compiledPresets, {
+      rootPath,
+      flattenPaths,
+      soundSyncStrategy,
+      soundMatchMode,
+      orphanPolicy,
+      updateSoundParams,
+      updateSoundPath,
+      updateSoundName,
+      updateSoundSort,
+      markManagedSounds,
+      preferManagedMatch
+    });
 
     const dt = ((Date.now() - t0) / 1000).toFixed(1);
     ui.notifications.info(
       game.i18n.format("PLAYLISTSYNC.InfoScanComplete", {
         time: dt,
         playlists: result.playlistsTouched,
-        sounds: result.soundsCreated
+        created: result.soundsCreated,
+        updated: result.soundsUpdated,
+        deleted: result.soundsDeleted
       })
     );
   }
@@ -638,42 +840,308 @@ async function applyPlaylistPreset(playlist, preset) {
   }
 }
 
-async function replacePlaylistSounds(playlist, filePaths, preset, options = {}) {
+function extractStemFromDisplayName(name) {
+  // In flattened mode, names look like "[horror/crypt] home".
+  // Strip the leading tag to get a stable file stem.
+  const s = String(name ?? "");
+  return s.replace(/^\[[^\]]+\]\s*/u, "").trim();
+}
+
+function toSoundId(sound) {
+  return sound?.id ?? sound?._id ?? null;
+}
+
+function isManagedSound(sound) {
+  try {
+    return !!sound?.getFlag?.(MODULE_ID, "managed") || !!sound?.flags?.[MODULE_ID]?.managed;
+  } catch {
+    return !!sound?.flags?.[MODULE_ID]?.managed;
+  }
+}
+
+function getManagedMeta(sound) {
+  try {
+    return {
+      sourcePath: sound?.getFlag?.(MODULE_ID, "sourcePath") ?? sound?.flags?.[MODULE_ID]?.sourcePath ?? null,
+      stem: sound?.getFlag?.(MODULE_ID, "stem") ?? sound?.flags?.[MODULE_ID]?.stem ?? null
+    };
+  } catch {
+    return {
+      sourcePath: sound?.flags?.[MODULE_ID]?.sourcePath ?? null,
+      stem: sound?.flags?.[MODULE_ID]?.stem ?? null
+    };
+  }
+}
+
+function pushToMultiMap(map, key, value) {
+  if (!key) return;
+  if (!map.has(key)) map.set(key, []);
+  map.get(key).push(value);
+}
+
+function indexExistingSounds(sounds) {
+  const byName = new Map();
+  const byPath = new Map();
+  const byStem = new Map();
+  const byManagedPath = new Map();
+
+  for (const s of sounds ?? []) {
+    const name = String(s?.name ?? "").trim();
+    const pth = normalizePath(s?.path ?? "");
+
+    const stemFromName = extractStemFromDisplayName(name);
+    const meta = getManagedMeta(s);
+    const stem = String(meta?.stem ?? "") || stemFromName || decodedFileStem(pth) || name;
+
+    const managedPath = normalizePath(meta?.sourcePath ?? "");
+
+    pushToMultiMap(byName, name, s);
+    pushToMultiMap(byPath, pth, s);
+    pushToMultiMap(byStem, stem, s);
+    if (managedPath) pushToMultiMap(byManagedPath, managedPath, s);
+  }
+
+  return { byName, byPath, byStem, byManagedPath };
+}
+
+function pickBestCandidate(candidates, usedIds) {
+  const list = Array.isArray(candidates) ? candidates : [];
+  const filtered = list.filter((s) => {
+    const id = toSoundId(s);
+    return id && !usedIds.has(id);
+  });
+  if (!filtered.length) return null;
+  const managed = filtered.find(isManagedSound);
+  return managed ?? filtered[0];
+}
+
+function buildDesiredSoundData(filePaths, preset, options = {}) {
   const { rootPath = "", flattenPaths = false } = options || {};
 
-  const existingIds = playlist.sounds?.map((s) => s.id) ?? [];
-  if (existingIds.length) {
-    await playlist.deleteEmbeddedDocuments("PlaylistSound", existingIds);
-  }
+  // If no preset matched the playlist, don't force per-sound parameters on existing sounds.
+  // (Otherwise we would keep resetting user-tweaked volume/repeat/etc on every sync.)
+  const hasPreset = !!preset;
 
-  const hasPresetVolume = typeof preset?.volume === "number" && Number.isFinite(preset.volume);
-  const perSoundVolume = hasPresetVolume ? clamp01(preset.volume) : 0.8;
-  const repeat = typeof preset?.repeat === "boolean" ? preset.repeat : false;
-  const channel = preset?.channel;
-  const fade = Number.isFinite(Number(preset?.fade)) ? Math.max(0, Math.trunc(Number(preset.fade))) : null;
+  const hasPresetVolume = hasPreset && typeof preset?.volume === "number" && Number.isFinite(preset.volume);
+  const perSoundVolume = hasPresetVolume ? clamp01(preset.volume) : null;
 
-  const soundsData = filePaths.map((path, i) => ({
-    name: flattenPaths ? taggedSoundName(path, rootPath) : decodedFileStem(path),
-    path,
-    repeat,
-    volume: perSoundVolume,
-    ...(channel ? { channel } : {}),
-    ...(fade !== null ? { fade } : {}),
-    sort: (i + 1) * 10
+  const repeat = hasPreset && typeof preset?.repeat === "boolean" ? !!preset.repeat : null;
+  const channel = hasPreset ? preset?.channel : null;
+  const fade = hasPreset && Number.isFinite(Number(preset?.fade)) ? Math.max(0, Math.trunc(Number(preset.fade))) : null;
+
+  return (filePaths ?? []).map((path, i) => {
+    const normPath = normalizePath(path);
+    const stem = decodedFileStem(normPath);
+    const name = flattenPaths ? taggedSoundName(normPath, rootPath) : stem;
+
+    return {
+      name,
+      stem,
+      path: normPath,
+      repeat,
+      volume: perSoundVolume,
+      channel,
+      fade,
+      sort: (i + 1) * 10
+    };
+  });
+}
+
+function buildManagedFlags(desired) {
+  return {
+    [MODULE_ID]: {
+      managed: true,
+      sourcePath: desired.path,
+      stem: desired.stem
+    }
+  };
+}
+
+async function recreatePlaylistSounds(playlist, filePaths, preset, options = {}) {
+  const desired = buildDesiredSoundData(filePaths, preset, options);
+  const markManagedSounds = !!options?.markManagedSounds;
+
+  const existingIds = (playlist.sounds?.map?.((s) => toSoundId(s)) ?? [])
+    .filter(Boolean);
+  const deleted = existingIds.length;
+
+  const soundsData = desired.map((d) => ({
+    name: d.name,
+    path: d.path,
+    repeat: d.repeat ?? false,
+    volume: d.volume ?? 0.8,
+    ...(d.channel ? { channel: d.channel } : {}),
+    ...(d.fade !== null ? { fade: d.fade } : {}),
+    sort: d.sort,
+    ...(markManagedSounds ? { flags: buildManagedFlags(d) } : {})
   }));
 
+  // Safer order: create first, then delete old (so a failed create doesn't wipe the playlist).
   if (soundsData.length) {
-    await playlist.createEmbeddedDocuments("PlaylistSound", soundsData);
+    await playlist.createEmbeddedDocuments("PlaylistSound", soundsData, { render: false });
   }
 
-  return soundsData.length;
+  if (existingIds.length) {
+    await playlist.deleteEmbeddedDocuments("PlaylistSound", existingIds, { render: false });
+  }
+
+  return { created: soundsData.length, updated: 0, deleted };
+}
+
+async function mergePlaylistSounds(playlist, filePaths, preset, options = {}) {
+  const {
+    rootPath = "",
+    flattenPaths = false,
+    soundMatchMode = "name",
+    orphanPolicy = "keep",
+    updateSoundParams = true,
+    updateSoundPath = true,
+    updateSoundName = true,
+    updateSoundSort = true,
+    markManagedSounds = true,
+    preferManagedMatch = true
+  } = options || {};
+
+  const existingSounds = playlist.sounds?.contents ?? Array.from(playlist.sounds ?? []);
+  const idx = indexExistingSounds(existingSounds);
+
+  const desired = buildDesiredSoundData(filePaths, preset, { rootPath, flattenPaths });
+
+  const usedIds = new Set();
+  const updates = [];
+  const creates = [];
+
+  function getKey(d) {
+    switch (String(soundMatchMode ?? "name")) {
+      case "path":
+        return { map: idx.byPath, key: d.path };
+      case "stem":
+        return { map: idx.byStem, key: d.stem };
+      case "name":
+      default:
+        return { map: idx.byName, key: d.name };
+    }
+  }
+
+  for (const d of desired) {
+    // First, try to match by module metadata (sourcePath flag). This keeps sync idempotent
+    // even if the user renamed a sound, or FVTT auto-adjusted the name.
+    let candidate = null;
+    if (preferManagedMatch) {
+      candidate = pickBestCandidate(idx.byManagedPath.get(d.path), usedIds);
+    }
+    if (!candidate) {
+      const { map, key } = getKey(d);
+      candidate = pickBestCandidate(map.get(key), usedIds);
+    }
+
+    if (candidate) {
+      const id = toSoundId(candidate);
+      usedIds.add(id);
+
+      const upd = { _id: id };
+      let changed = false;
+
+      if (updateSoundParams) {
+        if (d.repeat !== null && typeof candidate.repeat === "boolean" && candidate.repeat !== d.repeat) {
+          upd.repeat = d.repeat;
+          changed = true;
+        }
+
+        const vol = Number(candidate.volume);
+        if (d.volume !== null && Number.isFinite(vol) && Math.abs(vol - d.volume) > 1e-6) {
+          upd.volume = d.volume;
+          changed = true;
+        }
+
+        if (d.channel && candidate.channel !== d.channel) {
+          upd.channel = d.channel;
+          changed = true;
+        }
+
+        if (d.fade !== null && Number(candidate.fade) !== d.fade) {
+          upd.fade = d.fade;
+          changed = true;
+        }
+      }
+
+      if (updateSoundPath && normalizePath(candidate.path ?? "") !== d.path) {
+        upd.path = d.path;
+        changed = true;
+      }
+
+      if (updateSoundName && String(candidate.name ?? "") !== d.name) {
+        upd.name = d.name;
+        changed = true;
+      }
+
+      if (updateSoundSort && Number(candidate.sort) !== d.sort) {
+        upd.sort = d.sort;
+        changed = true;
+      }
+
+      if (markManagedSounds) {
+        const alreadyManaged = isManagedSound(candidate);
+        const meta = getManagedMeta(candidate);
+        if (!alreadyManaged || normalizePath(meta.sourcePath ?? "") !== d.path || String(meta.stem ?? "") !== d.stem) {
+          upd.flags = {
+            ...(candidate.flags ?? {}),
+            ...buildManagedFlags(d)
+          };
+          changed = true;
+        }
+      }
+
+      if (changed) updates.push(upd);
+    } else {
+      const data = {
+        name: d.name,
+        path: d.path,
+        repeat: d.repeat ?? false,
+        volume: d.volume ?? 0.8,
+        ...(d.channel ? { channel: d.channel } : {}),
+        ...(d.fade !== null ? { fade: d.fade } : {}),
+        sort: d.sort,
+        ...(markManagedSounds ? { flags: buildManagedFlags(d) } : {})
+      };
+      creates.push(data);
+    }
+  }
+
+  if (updates.length) {
+    await playlist.updateEmbeddedDocuments("PlaylistSound", updates, { render: false });
+  }
+
+  if (creates.length) {
+    await playlist.createEmbeddedDocuments("PlaylistSound", creates, { render: false });
+  }
+
+  const orphans = existingSounds.filter((s) => {
+    const id = toSoundId(s);
+    return id && !usedIds.has(id);
+  });
+
+  let toDelete = [];
+  if (String(orphanPolicy ?? "keep") === "deleteAll") {
+    toDelete = orphans.map((s) => toSoundId(s)).filter(Boolean);
+  } else if (String(orphanPolicy ?? "keep") === "deleteManaged") {
+    toDelete = orphans.filter(isManagedSound).map((s) => toSoundId(s)).filter(Boolean);
+  }
+
+  if (toDelete.length) {
+    await playlist.deleteEmbeddedDocuments("PlaylistSound", toDelete, { render: false });
+  }
+
+  return { created: creates.length, updated: updates.length, deleted: toDelete.length };
 }
 
 async function applySyncPlan(plan, compiledPresets, options = {}) {
-  const { rootPath = "", flattenPaths = false } = options || {};
+  const { rootPath = "", flattenPaths = false, soundSyncStrategy = "merge" } = options || {};
 
   let playlistsTouched = 0;
   let soundsCreated = 0;
+  let soundsUpdated = 0;
+  let soundsDeleted = 0;
 
   for (const [category, playlists] of plan.entries()) {
     const folderId = flattenPaths ? null : (await getOrCreatePlaylistFolder(category)).id;
@@ -684,12 +1152,17 @@ async function applySyncPlan(plan, compiledPresets, options = {}) {
       const preset = matchPresetForPlaylistPath(meta.fsPath, compiledPresets);
       await applyPlaylistPreset(playlist, preset);
 
-      const created = await replacePlaylistSounds(playlist, meta.files, preset, { rootPath, flattenPaths });
+      const counts =
+        String(soundSyncStrategy ?? "merge") === "recreate"
+          ? await recreatePlaylistSounds(playlist, meta.files, preset, options)
+          : await mergePlaylistSounds(playlist, meta.files, preset, options);
 
       playlistsTouched += 1;
-      soundsCreated += created;
+      soundsCreated += counts.created;
+      soundsUpdated += counts.updated;
+      soundsDeleted += counts.deleted;
     }
   }
 
-  return { playlistsTouched, soundsCreated };
+  return { playlistsTouched, soundsCreated, soundsUpdated, soundsDeleted };
 }

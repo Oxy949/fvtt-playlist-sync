@@ -31,6 +31,89 @@
 
   <hr/>
 
+  <h3>{{soundSyncTitle}}</h3>
+  <p class="notes">{{{soundSyncHint}}}</p>
+
+  <div class="form-group">
+    <label>{{soundSyncStrategyLabel}}</label>
+    <div class="form-fields">
+      <select name="soundSyncStrategy">
+        {{selectOptions soundStrategies selected=soundSyncStrategy}}
+      </select>
+    </div>
+    <p class="notes">{{{soundSyncStrategyHint}}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{soundMatchModeLabel}}</label>
+    <div class="form-fields">
+      <select name="soundMatchMode">
+        {{selectOptions soundMatchModes selected=soundMatchMode}}
+      </select>
+    </div>
+    <p class="notes">{{{soundMatchModeHint}}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{orphanPolicyLabel}}</label>
+    <div class="form-fields">
+      <select name="orphanPolicy">
+        {{selectOptions orphanPolicies selected=orphanPolicy}}
+      </select>
+    </div>
+    <p class="notes">{{{orphanPolicyHint}}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{updateSoundParamsLabel}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="updateSoundParams" {{#if updateSoundParams}}checked{{/if}} />
+    </div>
+    <p class="notes">{{{updateSoundParamsHint}}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{updateSoundPathLabel}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="updateSoundPath" {{#if updateSoundPath}}checked{{/if}} />
+    </div>
+    <p class="notes">{{{updateSoundPathHint}}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{updateSoundNameLabel}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="updateSoundName" {{#if updateSoundName}}checked{{/if}} />
+    </div>
+    <p class="notes">{{{updateSoundNameHint}}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{updateSoundSortLabel}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="updateSoundSort" {{#if updateSoundSort}}checked{{/if}} />
+    </div>
+    <p class="notes">{{{updateSoundSortHint}}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{markManagedSoundsLabel}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="markManagedSounds" {{#if markManagedSounds}}checked{{/if}} />
+    </div>
+    <p class="notes">{{{markManagedSoundsHint}}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{preferManagedMatchLabel}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="preferManagedMatch" {{#if preferManagedMatch}}checked{{/if}} />
+    </div>
+    <p class="notes">{{{preferManagedMatchHint}}}</p>
+  </div>
+
+  <hr/>
+
   <h3>{{presetsTitle}}</h3>
   <p class="notes">{{{presetsHint}}}</p>
 

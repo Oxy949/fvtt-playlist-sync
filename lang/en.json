@@ -15,7 +15,7 @@
     "InfoScanStart": "Playlist Sync: scanning Data/{rootPath} ...",
     "ErrorBrowseFailed": "Playlist Sync: unable to scan folder (see console).",
     "WarnGMOnly": "Synchronization is available only to GM.",
-    "InfoScanComplete": "Playlist Sync: completed in {time}s. Playlists: {playlists}, sounds: {sounds}.",
+    "InfoScanComplete": "Playlist Sync: completed in {time}s. Playlists: {playlists}. Sounds: +{created} / updated {updated} / deleted {deleted}.",
     "MenuDescription": "Synchronization creates (or updates) playlists by folder structure inside <code>Data/{rootPath}</code>. Playlists are grouped as:",
     "MenuExample1": "{rootPath}/<folder>/<subfolder...>/file.ext",
     "MenuExample2": "<b>Folder (Playlist)</b> = <code>&lt;folder&gt;</code>",
@@ -23,7 +23,72 @@
     "MenuLabel": "Root Folder",
     "MenuNote1": "Default: <code>assets/audio</code>. Use slashes <code>/</code>, not <code>\\</code>.",
     "MenuButton": "Synchronize",
-    "MenuNote2": "Important: requires GM access. Sounds in found playlists will be recreated.",
+    "MenuNote2": "Important: requires GM access. By default, sounds are updated in place (UUIDs and references are preserved). Recreate mode intentionally breaks references.",
+
+    "SoundSyncTitle": "Sound synchronization",
+    "SoundSyncHint": "Configure how the module updates PlaylistSound documents. In-place updates preserve UUIDs (and any references).",
+
+    "SoundSyncStrategy": {
+      "name": "Sound sync strategy",
+      "hint": "Merge keeps UUIDs and references. Recreate deletes and creates again (references break).",
+      "label": "Strategy",
+      "merge": "Update existing (preserve references)",
+      "recreate": "Recreate all sounds (break references)"
+    },
+
+    "SoundMatchMode": {
+      "name": "Sound matching",
+      "hint": "How to match a filesystem file to an existing PlaylistSound while merging.",
+      "label": "Match by",
+      "nameChoice": "Sound name",
+      "pathChoice": "File path",
+      "stemChoice": "Filename stem (no tags)"
+    },
+
+    "OrphanPolicy": {
+      "name": "Orphan sounds",
+      "hint": "What to do with sounds that exist in a playlist but are not present in the filesystem plan.",
+      "label": "Unmatched sounds",
+      "keep": "Keep",
+      "deleteManaged": "Delete only managed",
+      "deleteAll": "Delete all unmatched"
+    },
+
+    "UpdateSoundParams": {
+      "name": "Update sound parameters",
+      "hint": "When a match is found, update repeat/volume/channel/fade (merge mode).",
+      "label": "Parameters (volume/repeat/channel/fade)"
+    },
+
+    "UpdateSoundPath": {
+      "name": "Update file path",
+      "hint": "When a match is found, update path if the file moved.",
+      "label": "Path (path)"
+    },
+
+    "UpdateSoundName": {
+      "name": "Update sound name",
+      "hint": "When a match is found, update name (useful for tags in flattened mode).",
+      "label": "Name (name)"
+    },
+
+    "UpdateSoundSort": {
+      "name": "Update sorting",
+      "hint": "When a match is found, update sort so track order matches the file list.",
+      "label": "Order (sort)"
+    },
+
+    "MarkManagedSounds": {
+      "name": "Mark sounds as managed",
+      "hint": "Set module flags on created/updated sounds. Required for safe 'delete managed only'.",
+      "label": "Mark as managed (flags)"
+    },
+
+    "PreferManagedMatch": {
+      "name": "Prefer matching by metadata",
+      "hint": "First try matching sounds by the module flag (sourcePath). Makes sync idempotent even if a sound name changed (manually or via FVTT auto-rename).",
+      "label": "Match by sourcePath first"
+    },
     "Presets": {
       "name": "Presets",
       "hint": "Presets allow customizing volume, repeat, channel, fade settings, and playback mode for playlists based on their path patterns."
