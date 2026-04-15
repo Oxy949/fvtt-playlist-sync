@@ -1,4 +1,5 @@
 const MODULE_ID = "fvtt-playlist-sync";
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const AUDIO_EXTENSIONS = [".mp3", ".ogg", ".wav", ".flac", ".m4a", ".webm", ".aac"];
 
@@ -148,18 +149,35 @@ Hooks.once("init", () => {
   });
 });
 
-class PlaylistSyncMenu extends FormApplication {
-  static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
-      id: "playlist-sync-menu",
-      title: "PLAYLISTSYNC.MenuTitle",
-      template: `modules/${MODULE_ID}/templates/sync-menu.hbs`,
-      width: 560,
-      closeOnSubmit: false
-    });
+class PlaylistSyncMenu extends HandlebarsApplicationMixin(ApplicationV2) {
+  static DEFAULT_OPTIONS = {
+    id: "playlist-sync-menu",
+    tag: "form",
+    position: {
+      width: 560
+    },
+    window: {
+      title: "Playlist Synchronization"
+    },
+    form: {
+      closeOnSubmit: false,
+      handler: async function(event, form, formData) {
+        return this._onSubmitForm(event, form, formData);
+      }
+    }
+  };
+
+  static PARTS = {
+    body: {
+      template: `modules/${MODULE_ID}/templates/sync-menu.hbs`
+    }
+  };
+
+  get title() {
+    return game.i18n.localize("PLAYLISTSYNC.MenuTitle");
   }
 
-  getData() {
+  async _prepareContext() {
     const presets = getPresetsForUi();
     return {
       rootPath: game.settings.get(MODULE_ID, "rootPath"),
@@ -263,20 +281,28 @@ class PlaylistSyncMenu extends FormApplication {
     };
   }
 
-  activateListeners(html) {
-    super.activateListeners(html);
+  _onRender(...args) {
+    super._onRender?.(...args);
 
-    html.find('button[data-action="sync"]').on("click", async () => {
+    const form = this.element?.matches?.("form") ? this.element : this.element?.querySelector("form");
+    if (!form) return;
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await this._onSubmitForm(event, form, new foundry.applications.ux.FormDataExtended(form));
+    });
+
+    form.querySelector('button[data-action="sync"]')?.addEventListener("click", async () => {
       await this._doSync();
     });
 
-    html.find('input[name="rootPath"]').on("change", async (ev) => {
+    form.querySelector('input[name="rootPath"]')?.addEventListener("change", async (ev) => {
       const value = String(ev.currentTarget.value ?? "").trim();
       await game.settings.set(MODULE_ID, "rootPath", value);
       this.render(false);
     });
 
-    html.find('input[name="flattenPaths"]').on("change", async (ev) => {
+    form.querySelector('input[name="flattenPaths"]')?.addEventListener("change", async (ev) => {
       const value = !!ev.currentTarget.checked;
       await game.settings.set(MODULE_ID, "flattenPaths", value);
       this.render(false);
@@ -284,7 +310,7 @@ class PlaylistSyncMenu extends FormApplication {
 
     // Sound sync options (stored as world settings)
     for (const key of ["soundSyncStrategy", "soundMatchMode", "orphanPolicy"]) {
-      html.find(`select[name="${key}"]`).on("change", async (ev) => {
+      form.querySelector(`select[name="${key}"]`)?.addEventListener("change", async (ev) => {
         const value = String(ev.currentTarget.value ?? "");
         await game.settings.set(MODULE_ID, key, value);
         this.render(false);
@@ -299,7 +325,7 @@ class PlaylistSyncMenu extends FormApplication {
       "markManagedSounds",
       "preferManagedMatch"
     ]) {
-      html.find(`input[name="${key}"]`).on("change", async (ev) => {
+      form.querySelector(`input[name="${key}"]`)?.addEventListener("change", async (ev) => {
         const value = !!ev.currentTarget.checked;
         await game.settings.set(MODULE_ID, key, value);
         this.render(false);
@@ -307,42 +333,47 @@ class PlaylistSyncMenu extends FormApplication {
     }
 
     // Presets UI
-    html.find('button[data-action="add-preset"]').on("click", async () => {
+    form.querySelector('button[data-action="add-preset"]')?.addEventListener("click", async () => {
       const presets = getPresetsRaw();
       presets.push(makeDefaultPreset());
       await savePresets(presets);
       this.render(false);
     });
 
-    html.find('button[data-action="delete-preset"]').on("click", async (ev) => {
-      const idx = Number(ev.currentTarget?.dataset?.index);
-      if (!Number.isFinite(idx)) return;
-      const presets = getPresetsRaw();
-      presets.splice(idx, 1);
-      await savePresets(presets);
-      this.render(false);
+    form.querySelectorAll('button[data-action="delete-preset"]').forEach((button) => {
+      button.addEventListener("click", async (ev) => {
+        const idx = Number(ev.currentTarget?.dataset?.index);
+        if (!Number.isFinite(idx)) return;
+
+        const presets = getPresetsRaw();
+        presets.splice(idx, 1);
+        await savePresets(presets);
+        this.render(false);
+      });
     });
 
-    html.find('button[data-action="move-preset"]').on("click", async (ev) => {
-      const idx = Number(ev.currentTarget?.dataset?.index);
-      const dir = String(ev.currentTarget?.dataset?.dir ?? "");
-      if (!Number.isFinite(idx) || !dir) return;
+    form.querySelectorAll('button[data-action="move-preset"]').forEach((button) => {
+      button.addEventListener("click", async (ev) => {
+        const idx = Number(ev.currentTarget?.dataset?.index);
+        const dir = String(ev.currentTarget?.dataset?.dir ?? "");
+        if (!Number.isFinite(idx) || !dir) return;
 
-      const presets = getPresetsRaw();
-      const j = dir === "up" ? idx - 1 : dir === "down" ? idx + 1 : idx;
-      if (j < 0 || j >= presets.length || j === idx) return;
+        const presets = getPresetsRaw();
+        const j = dir === "up" ? idx - 1 : dir === "down" ? idx + 1 : idx;
+        if (j < 0 || j >= presets.length || j === idx) return;
 
-      const tmp = presets[idx];
-      presets[idx] = presets[j];
-      presets[j] = tmp;
+        const tmp = presets[idx];
+        presets[idx] = presets[j];
+        presets[j] = tmp;
 
-      await savePresets(presets);
-      this.render(false);
+        await savePresets(presets);
+        this.render(false);
+      });
     });
 
     // Any preset field change
-    html.find(".playlist-sync-preset").on("change", "input, select", async (ev) => {
-      const el = ev.currentTarget;
+    form.querySelector(".playlist-sync-preset")?.addEventListener("change", async (ev) => {
+      const el = ev.target;
       const idx = Number(el?.dataset?.index);
       const field = String(el?.dataset?.field ?? "");
       if (!Number.isFinite(idx) || !field) return;
@@ -381,7 +412,7 @@ class PlaylistSyncMenu extends FormApplication {
     });
   }
 
-  async _updateObject(_event, _formData) {
+  async _onSubmitForm(_event, _form, _formData) {
     // ничего: мы сохраняем rootPath на change
   }
 

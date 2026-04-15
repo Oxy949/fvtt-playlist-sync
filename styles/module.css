@@ -55,3 +55,23 @@
 #fvtt-avclient-vdoninja-conference-mode .current-mode {
   font-weight: 600;
 }
+
+/* Playlist Sync menu */
+#playlist-sync-menu,
+#playlist-sync-menu .window-content,
+#playlist-sync-menu .standard-form {
+  min-height: 0;
+}
+
+#playlist-sync-menu {
+  max-height: calc(100vh - 4rem);
+}
+
+#playlist-sync-menu .window-content {
+  overflow: hidden;
+}
+
+#playlist-sync-menu .standard-form {
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
