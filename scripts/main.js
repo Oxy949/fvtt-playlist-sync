@@ -299,13 +299,13 @@ class PlaylistSyncMenu extends HandlebarsApplicationMixin(ApplicationV2) {
     form.querySelector('input[name="rootPath"]')?.addEventListener("change", async (ev) => {
       const value = String(ev.currentTarget.value ?? "").trim();
       await game.settings.set(MODULE_ID, "rootPath", value);
-      this.render(false);
+      await this._renderPreservingScroll();
     });
 
     form.querySelector('input[name="flattenPaths"]')?.addEventListener("change", async (ev) => {
       const value = !!ev.currentTarget.checked;
       await game.settings.set(MODULE_ID, "flattenPaths", value);
-      this.render(false);
+      await this._renderPreservingScroll();
     });
 
     // Sound sync options (stored as world settings)
@@ -313,7 +313,7 @@ class PlaylistSyncMenu extends HandlebarsApplicationMixin(ApplicationV2) {
       form.querySelector(`select[name="${key}"]`)?.addEventListener("change", async (ev) => {
         const value = String(ev.currentTarget.value ?? "");
         await game.settings.set(MODULE_ID, key, value);
-        this.render(false);
+        await this._renderPreservingScroll();
       });
     }
 
@@ -328,7 +328,7 @@ class PlaylistSyncMenu extends HandlebarsApplicationMixin(ApplicationV2) {
       form.querySelector(`input[name="${key}"]`)?.addEventListener("change", async (ev) => {
         const value = !!ev.currentTarget.checked;
         await game.settings.set(MODULE_ID, key, value);
-        this.render(false);
+        await this._renderPreservingScroll();
       });
     }
 
@@ -337,7 +337,7 @@ class PlaylistSyncMenu extends HandlebarsApplicationMixin(ApplicationV2) {
       const presets = getPresetsRaw();
       presets.push(makeDefaultPreset());
       await savePresets(presets);
-      this.render(false);
+      await this._renderPreservingScroll();
     });
 
     form.querySelectorAll('button[data-action="delete-preset"]').forEach((button) => {
@@ -348,7 +348,7 @@ class PlaylistSyncMenu extends HandlebarsApplicationMixin(ApplicationV2) {
         const presets = getPresetsRaw();
         presets.splice(idx, 1);
         await savePresets(presets);
-        this.render(false);
+        await this._renderPreservingScroll();
       });
     });
 
@@ -367,7 +367,7 @@ class PlaylistSyncMenu extends HandlebarsApplicationMixin(ApplicationV2) {
         presets[j] = tmp;
 
         await savePresets(presets);
-        this.render(false);
+        await this._renderPreservingScroll();
       });
     });
 
@@ -408,8 +408,54 @@ class PlaylistSyncMenu extends HandlebarsApplicationMixin(ApplicationV2) {
 
       presets[idx] = sanitizePreset(p);
       await savePresets(presets);
-      this.render(false);
+      await this._renderPreservingScroll();
     });
+  }
+
+  _getScrollContainer() {
+    const element = this.element;
+    if (!element) return null;
+
+    const candidates = [
+      element.closest?.(".window-content"),
+      element.querySelector?.(".window-content"),
+      element.closest?.(".application")?.querySelector?.(".window-content"),
+      element.closest?.(".window-app")?.querySelector?.(".window-content"),
+      element.querySelector?.(".standard-form"),
+      element
+    ].filter(Boolean);
+
+    return candidates.find((el) => el.scrollHeight > el.clientHeight) ?? candidates[0] ?? null;
+  }
+
+  _getScrollState() {
+    const container = this._getScrollContainer();
+    if (!container) return null;
+    return {
+      top: container.scrollTop,
+      left: container.scrollLeft
+    };
+  }
+
+  _restoreScrollState(state) {
+    if (!state) return;
+
+    const restore = () => {
+      const container = this._getScrollContainer();
+      if (!container) return;
+      container.scrollTop = state.top;
+      container.scrollLeft = state.left;
+    };
+
+    restore();
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(restore);
+    else setTimeout(restore, 0);
+  }
+
+  async _renderPreservingScroll() {
+    const scrollState = this._getScrollState();
+    await this.render(false);
+    this._restoreScrollState(scrollState);
   }
 
   async _onSubmitForm(_event, _form, _formData) {
