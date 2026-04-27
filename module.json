@@ -24,9 +24,6 @@
   "esmodules": [
     "scripts/main.js"
   ],
-  "templates": [
-    "templates/sync-menu.hbs"
-  ],
   "scripts": [],
   "styles": [
     "styles/module.css"
